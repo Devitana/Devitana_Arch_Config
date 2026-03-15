@@ -2,6 +2,10 @@
 
 Personal Arch Linux Waybar configuration with custom scripts and styling.
 
+This is my first project since moving to Linux about a year ago. I had no coding experience before this—only some basic knowledge.
+Please be kind. I did use AI to help me, and I worked on this project for about one hour each night. It took me more than three months to finish.
+Any feedback would be greatly appreciated. If you find this project interesting, I would be very happy if you tried it.
+
 ## Features
 
 - **Waybar Status Bar** - Customized for Wayland environments
@@ -19,6 +23,7 @@ chmod +x install.sh
 ```
 
 The script will:
+
 - Install core Waybar dependencies
 - Copy config to `~/.config/waybar`
 - Make scripts executable
@@ -47,6 +52,7 @@ sudo pacman -S btop yay pavucontrol figlet
 ## File Manager / Browser
 
 Waybar has built-in launchers for:
+
 - **Firefox** (or Chromium/Vivaldi)
 - **File Manager** (nautilus/krusader)
 - **ChatGPT** quick link
@@ -69,11 +75,13 @@ You can customize these in `~/.config/waybar/config.jsonc`:
 ### Weather Location
 
 Edit `~/.config/waybar/scripts/weather.sh`:
+
 ```bash
 LOCATION="Memmingen"  # Change to your city
 ```
 
 Or use environment variable:
+
 ```bash
 export WEATHER_LOCATION="Berlin"
 ```
@@ -88,6 +96,7 @@ Edit `~/.config/waybar/config.jsonc` for module configuration.
 
 | Script | Purpose |
 |--------|---------|
+
 | `weather.sh` | Display current weather with forecast |
 | `updates.sh` | Check for system updates |
 | `installupdates.sh` | Install all updates (pacman/AUR/flatpak) |
@@ -96,14 +105,17 @@ Edit `~/.config/waybar/config.jsonc` for module configuration.
 ## Troubleshooting
 
 **Weather not working:**
+
 - Check internet connection
 - Verify `jq` is installed: `pacman -Q jq`
 
 **Icons not displaying:**
+
 - Install fonts: `sudo pacman -S ttf-font-awesome noto-fonts`
 - Rebuild font cache: `fc-cache -fv`
 
 **Scripts not running:**
+
 - Make executable: `chmod +x ~/.config/waybar/scripts/*.sh`
 
 ## System Requirements
