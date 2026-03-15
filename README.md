@@ -9,7 +9,7 @@ Any feedback would be greatly appreciated. If you find this project interesting,
 
 ## Preview
 
-[![waybar](screenshots/2026-03-15_23-14.png)(screenshots/2026-03-15_23-00.png)]
+[![waybar](screenshots/2026-03-15_23-14.png)](screenshots/2026-03-15_23-00.png)
 
 ## Features
 
