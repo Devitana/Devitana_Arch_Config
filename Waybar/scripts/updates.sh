@@ -1,89 +1,131 @@
 #!/usr/bin/env bash
-# _ _ _ _
-# | | | |_ __ __| | __ _| |_ ___ ___
-# | | | | '_ \ / _` |/ _` | __/ _ \/ __|
-# | |_| | |_) | (_| | (_| | || __/\__ \
-# \___/| .__/ \__,_|\__,_|\__\___||___/
-# |_|
-# Check if command exists
+# Update checker for Waybar with improved error handling
+
+# ============================================================================
+# HELPER FUNCTIONS
+# ============================================================================
+
 _checkCommandExists() {
-  command -v "$1" >/dev/null
+    command -v "$1" >/dev/null 2>&1
 }
 
-script_name=$(basename "$0")
+_retry_curl() {
+    local max_attempts=3
+    local timeout=10
+    local attempt=1
+    
+    while [[ $attempt -le $max_attempts ]]; do
+        if timeout "$timeout" curl -fsS "$@"; then
+            return 0
+        fi
+        ((attempt++))
+        [[ $attempt -le $max_attempts ]] && sleep 2
+    done
+    
+    return 1
+}
 
-# Use flock to prevent concurrent runs
-exec 200>/tmp/updates.lock
+# ============================================================================
+# LOCK MANAGEMENT
+# ============================================================================
+
+LOCK_FILE="/tmp/updates-waybar.lock"
+LOCK_FD=200
+
+# Clean up lock file on exit
+trap 'rm -f "$LOCK_FILE"' EXIT
+
+exec 200>"$LOCK_FILE"
+
+# Prevent concurrent runs
 if ! flock -n 200; then
-  echo "Another instance running, exiting."
-  exit 0
+    echo '{"text": "", "tooltip": "Update check in progress...", "class": "updates-yellow"}'
+    exit 0
 fi
 
-# Thresholds for color classes (configurable via env vars)
-threshold_yellow=${THRESHOLD_YELLOW:-25}
-threshold_red=${THRESHOLD_RED:-100}
+# ============================================================================
+# CONFIGURATION
+# ============================================================================
 
-# -----------------------------------------------------
-# Check for updates
-# -----------------------------------------------------
-updates=0
-updates_pacman=0
-updates_aur=0
-updates_flatpak=0
-css_class="updates-green" # default
+THRESHOLD_YELLOW=${THRESHOLD_YELLOW:-25}
+THRESHOLD_RED=${THRESHOLD_RED:-100}
+CSS_CLASS="updates-green"
+UPDATES=0
+
+# ============================================================================
+# CHECK FOR UPDATES
+# ============================================================================
 
 if _checkCommandExists pacman; then
-  # Wait for pacman or checkupdates lock files
-  while [ -f /var/lib/pacman/db.lck ] || [ -f "${TMPDIR:-/tmp}/checkup-db-${UID}/db.lck" ]; do
-    sleep 1
-  done
+    # Wait for pacman lock
+    WAIT_TIME=0
+    while [[ -f /var/lib/pacman/db.lck ]] && [[ $WAIT_TIME -lt 30 ]]; do
+        sleep 1
+        ((WAIT_TIME++))
+    done
 
-  # Determine AUR helper
-  if _checkCommandExists yay && ! _checkCommandExists paru; then
-    aur_helper="yay"
-  elif _checkCommandExists paru; then
-    aur_helper="paru"
-  else
-    aur_helper="yay"
-  fi
+    UPDATES_PACMAN=0
+    UPDATES_AUR=0
+    UPDATES_FLATPAK=0
 
-  # AUR updates
-  updates_aur=$($aur_helper -Qum 2>/dev/null | wc -l) || updates_aur=0
+    # Pacman updates
+    if command -v checkupdates >/dev/null 2>&1; then
+        UPDATES_PACMAN=$(checkupdates 2>/dev/null | wc -l) || UPDATES_PACMAN=0
+    fi
 
-  # Pacman updates
-  updates_pacman=$(checkupdates 2>/dev/null | wc -l) || updates_pacman=0
+    # AUR updates - detect helper
+    if _checkCommandExists paru && ! _checkCommandExists yay; then
+        AUR_HELPER="paru"
+    elif _checkCommandExists yay; then
+        AUR_HELPER="yay"
+    else
+        AUR_HELPER=""
+    fi
 
-  # Flatpak updates (if installed)
-  if _checkCommandExists flatpak; then
-    updates_flatpak=$(flatpak remote-ls --updates flathub 2>/dev/null | wc -l) || updates_flatpak=0
-  fi
+    if [[ -n "$AUR_HELPER" ]]; then
+        UPDATES_AUR=$($AUR_HELPER -Qum 2>/dev/null | wc -l) || UPDATES_AUR=0
+    fi
 
-  updates=$((updates_aur + updates_pacman + updates_flatpak))
+    # Flatpak updates
+    if _checkCommandExists flatpak; then
+        UPDATES_FLATPAK=$(flatpak remote-ls --updates flathub 2>/dev/null | wc -l) || UPDATES_FLATPAK=0
+    fi
+
+    UPDATES=$((UPDATES_AUR + UPDATES_PACMAN + UPDATES_FLATPAK))
+
 elif _checkCommandExists dnf; then
-  updates=$(dnf check-update -q | grep -c '^[a-zA-Z0-9]' || echo 0)
+    # Fedora/RHEL support
+    UPDATES=$(dnf check-update -q 2>/dev/null | grep -c '^[a-zA-Z0-9]' || echo 0)
 fi
 
-# -----------------------------------------------------
-# Set CSS class based on update count
-# -----------------------------------------------------
-if [ "$updates" -gt "$threshold_red" ]; then
-  css_class="updates-red"
-  notify-send -u critical "Critical Updates" "$updates updates available! Update soon."  # Auto-notify on red
-elif [ "$updates" -gt "$threshold_yellow" ]; then
-  css_class="updates-yellow"
+# ============================================================================
+# DETERMINE CSS CLASS & NOTIFICATION
+# ============================================================================
+
+if [[ $UPDATES -gt $THRESHOLD_RED ]]; then
+    CSS_CLASS="updates-red"
+    # Auto-notify on critical
+    notify-send -u critical "Critical Updates" "$UPDATES updates available! Please update soon." 2>/dev/null || true
+elif [[ $UPDATES -gt $THRESHOLD_YELLOW ]]; then
+    CSS_CLASS="updates-yellow"
 else
-  css_class="updates-green"
+    CSS_CLASS="updates-green"
 fi
 
-# -----------------------------------------------------
-# Always output valid JSON for Waybar
-# -----------------------------------------------------
-if [ "$updates" -gt 0 ]; then
-  tooltip="Click to update your system ($updates_pacman pacman + $updates_aur AUR + $updates_flatpak Flatpak updates available)"
-  text=" $updates"
+# ============================================================================
+# OUTPUT FOR WAYBAR
+# ============================================================================
+
+if [[ $UPDATES -gt 0 ]]; then
+    TOOLTIP="📦 Pacman: $UPDATES_PACMAN | 🏗️  AUR: $UPDATES_AUR | 📦 Flatpak: $UPDATES_FLATPAK\n\nClick to update your system"
+    TEXT=" $UPDATES"
 else
-  tooltip="System is up to date"
-  text="" # Empty text + hide-empty-text = module disappears when up-to-date
+    TOOLTIP="✓ System is up to date"
+    TEXT=""
 fi
+
+# Output valid JSON for Waybar
 printf '{"text": "%s", "alt": "%s", "tooltip": "%s", "class": "%s"}\n' \
-  "$text" "$updates" "$tooltip" "$css_class"
+    "$TEXT" "$UPDATES" "$TOOLTIP" "$CSS_CLASS"
+
+exit 0
