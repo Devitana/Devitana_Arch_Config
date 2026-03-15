@@ -1,0 +1,643 @@
+/* =========================================
+                WAYBAR / GLOBAL
+========================================= */
+window#waybar {
+    background: rgba(30, 30, 46, 0.5);
+}
+* {
+    background: transparent; /* modules often need this */
+}
+
+/* =========================================
+            WAYBAR LEFT MODULE
+========================================= */
+
+/* Workspaces container */
+#workspaces {
+    margin-left: 4px;
+    margin-right: 4px;
+}
+
+/* Individual workspace */
+#workspaces button {
+    padding: 0px 2px;
+    margin: 0 2px;
+
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.65);
+
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.04);
+
+    transition:
+        background 200ms ease,
+        color 200ms ease,
+        box-shadow 200ms ease;
+}
+
+/* Hover */
+#workspaces button:hover {
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.10);
+}
+
+/* Active workspace */
+#workspaces button.active {
+    color: rgba(255, 255, 255, 0.95);
+    background:
+        radial-gradient(
+            circle at center,
+            rgba(255, 255, 255, 0.35) 0%,
+            rgba(255, 255, 255, 0.15) 60%,
+            rgba(255, 255, 255, 0.05) 100%
+        );
+
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.25),
+        0 4px 10px rgba(0, 0, 0, 0.35);
+}
+
+/* Base launcher style */
+#custom-chatgpt,
+#custom-firefox,
+#custom-files {
+    font-size: 32px;
+    padding: 0px 6px 0px 6px;
+    margin: 0 2px;
+    color: rgba(255, 255, 255, 0.85);
+    border-radius: 12px;
+
+    background: rgba(255, 255, 255, 0.04);
+
+    transition:
+        background 200ms ease,
+        color 200ms ease,
+        box-shadow 200ms ease;
+}
+
+/* Hover glow */
+#custom-chatgpt:hover,
+#custom-firefox:hover,
+#custom-files:hover {
+    color: rgba(255, 255, 255, 0.95);
+    background:
+        radial-gradient(
+            circle at center,
+            rgba(255, 255, 255, 0.25) 0%,
+            rgba(255, 255, 255, 0.12) 50%,
+            rgba(255, 255, 255, 0.04) 100%
+        );
+
+    box-shadow:
+        0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+/* Click feedback */
+#custom-chatgpt:active,
+#custom-firefox:active,
+#custom-files:active {
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow:
+        inset 0 3px 6px rgba(0, 0, 0, 0.35);
+}
+
+/* Taskbar container */
+#taskbar {
+    margin-left: 6px;
+}
+
+/* Taskbar buttons */
+#taskbar button {
+    padding: 6px;
+    margin: 0 4px;
+
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.04);
+
+    transition:
+        background 200ms ease,
+        box-shadow 200ms ease,
+        opacity 200ms ease;
+}
+
+/* Hover */
+#taskbar button:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+/* Active / focused window */
+#taskbar button.active {
+    background:
+        radial-gradient(
+            circle at center,
+            rgba(255, 255, 255, 0.35) 0%,
+            rgba(255, 255, 255, 0.15) 60%,
+            rgba(255, 255, 255, 0.05) 100%
+        );
+
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.25),
+        0 4px 12px rgba(0, 0, 0, 0.45);
+}
+
+/* Minimized apps */
+#taskbar button.minimized {
+    opacity: 0.45;
+}
+
+
+/* =========================================
+            WAYBAR CENTER MODULE
+========================================= */
+
+/* Arch Linux button - official blue with glass style */
+#custom-arch {
+    color: #1793d1;             
+    font-size: 36px;            
+    font-weight: bold;
+    padding: 0 8px;
+    margin: 0px 4px;           /* Matches your drawer spacing - adjust as needed */
+}
+
+/* =========================================
+            WAYBAR RIGHT MODULE
+========================================= */
+
+/* =========================================
+   POWER BUTTON
+   ========================================= */
+#custom-power {
+    font-size: 26px;
+    padding: 0px 8px;
+    margin-left: 4px;
+    margin-right: 4px;
+    color: rgba(255, 255, 255, 0.9);
+    border-radius: 12px;
+    background:
+        linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0.08),
+            rgba(255, 255, 255, 0.02)
+        );
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.25),
+        0 2px 6px rgba(0, 0, 0, 0.25);
+    transition:
+        background 200ms ease,
+        border-color 200ms ease,
+        box-shadow 200ms ease;
+}
+
+#custom-power:hover {
+    background:
+        linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0.12),
+            rgba(255, 255, 255, 0.04)
+        );
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+#custom-power:active {
+    background:
+        radial-gradient(
+            circle at center,
+            rgba(255, 255, 255, 0.5) 0%,
+            rgba(255, 255, 255, 0.25) 45%,
+            rgba(255, 255, 255, 0.1) 80%
+        );
+    box-shadow:
+        inset 0 3px 6px rgba(0, 0, 0, 0.25);
+}
+
+menu {
+    background-color: rgba(30, 30, 46, 0.95);
+    border-radius: 12px;
+    padding: 4px;
+}
+
+menuitem {
+    padding: 8px 0px;
+    border-radius: 8px;
+}
+
+menuitem:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+
+/* =========================================
+   DRAWER ARROW
+   ========================================= */
+#custom-arrow {
+    font-size: 12px;
+    padding: 0px 4px;
+    margin-left: 4px;
+    color: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    background:
+        linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0.08),
+            rgba(255, 255, 255, 0.02)
+        );
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.25),
+        0 2px 6px rgba(0, 0, 0, 0.25);
+    transition:
+        background 200ms ease,
+        border-color 200ms ease,
+        box-shadow 200ms ease;
+}
+
+#custom-arrow:hover {
+    background:
+        linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0.12),
+            rgba(255, 255, 255, 0.04)
+        );
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+#custom-arrow:active {
+    background:
+        radial-gradient(
+            circle at center,
+            rgba(255, 255, 255, 0.5) 0%,
+            rgba(255, 255, 255, 0.25) 45%,
+            rgba(255, 255, 255, 0.1) 80%
+        );
+    box-shadow:
+        inset 0 3px 6px rgba(0, 0, 0, 0.25);
+}
+
+/* =========================================
+   HIDDEN DRAWER ITEMS
+   ========================================= */
+.system-hidden {
+    background: transparent;
+    transition: all 500ms ease;
+}
+
+/* =========================================
+   PULSE AUDIO
+   ========================================= */
+#pulseaudio {
+    font-size: 15px;
+    padding: 0 10px;
+    margin-left: 8px;
+    color: rgba(255, 255, 255, 0.9);
+    border-radius: 999px;
+    background:
+        linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0.08),
+            rgba(255, 255, 255, 0.02)
+        );
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.25),
+        0 2px 6px rgba(0, 0, 0, 0.25);
+    transition:
+        background 200ms ease,
+        border-color 200ms ease,
+        box-shadow 200ms ease;
+}
+
+#pulseaudio:hover {
+    background:
+        linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0.12),
+            rgba(255, 255, 255, 0.04)
+        );
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+#pulseaudio.muted {
+    color: #ff6b6b;
+    background:
+        linear-gradient(
+            to bottom,
+            rgba(255, 107, 107, 0.12),
+            rgba(255, 107, 107, 0.04)
+        );
+    border-color: rgba(255, 107, 107, 0.45);
+}
+
+/* =========================================
+   UPDATES MODULE
+   ========================================= */
+#custom-updates {
+    font-size: 15px;
+    padding: 0 10px;
+    margin-left: 4px;
+    border-radius: 999px;
+    background:
+        linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0.08),
+            rgba(255, 255, 255, 0.02)
+        );
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.25),
+        0 2px 6px rgba(0, 0, 0, 0.25);
+    transition:
+        background 200ms ease,
+        border-color 200ms ease,
+        box-shadow 200ms ease,
+        color 200ms ease;
+    font-weight: bold;
+    min-width: 28px;
+}
+
+#custom-updates:hover {
+    background:
+        linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0.12),
+            rgba(255, 255, 255, 0.04)
+        );
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+#custom-updates.updates-green { color: #a6e3a1; }
+#custom-updates.updates-yellow { color: #f5c236; }
+#custom-updates.updates-red {
+    color: #ff6b6b;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+/* =========================================
+   MEMORY
+   ========================================= */
+#memory {
+    font-size: 15px;
+    padding: 0 10px;
+    margin-left: 4px;
+    border-radius: 999px;
+    background:
+        linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0.08),
+            rgba(255, 255, 255, 0.02)
+        );
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.25),
+        0 2px 6px rgba(0, 0, 0, 0.25);
+    transition:
+        background 200ms ease,
+        border-color 200ms ease,
+        box-shadow 200ms ease,
+        color 200ms ease;
+    font-weight: bold;
+    min-width: 50px;
+}
+
+#memory:hover {
+    background:
+        linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0.12),
+            rgba(255, 255, 255, 0.04)
+        );
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+/* =========================================
+   CLOCK
+   ========================================= */
+#clock {
+    font-size: 15px;
+    padding: 0px 8px;
+    margin-left: 4px;
+    color: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    background:
+        linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0.08),
+            rgba(255, 255, 255, 0.02)
+        );
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.25),
+        0 2px 6px rgba(0, 0, 0, 0.25);
+    transition:
+        background 200ms ease,
+        border-color 200ms ease,
+        box-shadow 200ms ease;
+}
+
+#clock:hover {
+    background:
+        linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0.12),
+            rgba(255, 255, 255, 0.04)
+        );
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+#clock:active {
+    background:
+        radial-gradient(
+            circle at center,
+            rgba(255, 255, 255, 0.5) 0%,
+            rgba(255, 255, 255, 0.25) 45%,
+            rgba(255, 255, 255, 0.1) 80%
+        );
+    box-shadow:
+        inset 0 3px 6px rgba(0, 0, 0, 0.25);
+}
+
+tooltip {
+    background: rgba(30, 30, 46, 0.95);
+    border-radius: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+/* Clock-specific tooltip */
+#clock tooltip {
+    padding: 10px 14px;
+}
+
+/* Text inside tooltip */
+tooltip label {
+    color: #ffffff;
+    font-size: 0.9em;
+}
+
+/* Calendar markup spacing */
+tooltip box {
+    margin: 4px;
+}
+
+/* =========================================
+   WEATHER
+   ========================================= */
+#custom-weather {
+    font-size: 15px;
+    padding: 0px 8px;
+    margin-left: 4px;
+    color: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    background:
+        linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0.08),
+            rgba(255, 255, 255, 0.02)
+        );
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.25),
+        0 2px 6px rgba(0, 0, 0, 0.25);
+    transition:
+        background 200ms ease,
+        border-color 200ms ease,
+        box-shadow 200ms ease;
+}
+
+#custom-weather:hover {
+    background:
+        linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0.12),
+            rgba(255, 255, 255, 0.04)
+        );
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+#custom-weather:active {
+    background:
+        radial-gradient(
+            circle at center,
+            rgba(255, 255, 255, 0.5) 0%,
+            rgba(255, 255, 255, 0.25) 45%,
+            rgba(255, 255, 255, 0.1) 80%
+        );
+    box-shadow:
+        inset 0 3px 6px rgba(0, 0, 0, 0.25);
+}
+
+#custom-weather.tooltip {
+    background: rgba(30, 30, 30, 0.85);
+    color: #ffffff;
+    font-size: 0.9em;
+    font-weight: 500;
+    padding: 8px 12px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+}
+
+#custom-weather.tooltip div { margin-bottom: 6px; }
+#custom-weather.tooltip div:last-child { margin-bottom: 0; }
+
+/* =========================================
+   NETWORK
+   ========================================= */
+#network {
+    font-size: 15px;
+    padding: 0px 8px;
+    margin-left: 4px;
+    color: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    background:
+        linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0.08),
+            rgba(255, 255, 255, 0.02)
+        );
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.25),
+        0 2px 6px rgba(0, 0, 0, 0.25);
+    transition:
+        background 200ms ease,
+        border-color 200ms ease,
+        box-shadow 200ms ease,
+        color 200ms ease;
+    font-weight: bold;
+    min-width: 50px;
+}
+
+#network:hover {
+    background:
+        linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0.12),
+            rgba(255, 255, 255, 0.04)
+        );
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+#network:active {
+    background:
+        radial-gradient(
+            circle at center,
+            rgba(255, 255, 255, 0.5) 0%,
+            rgba(255, 255, 255, 0.25) 45%,
+            rgba(255, 255, 255, 0.1) 80%
+        );
+    box-shadow:
+        inset 0 3px 6px rgba(0, 0, 0, 0.25);
+}
+
+#network.tooltip {
+    background: rgba(30, 30, 30, 0.85);
+    color: #ffffff;
+    font-size: 0.9em;
+    font-weight: 500;
+    padding: 8px 12px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+}
+
+#network.tooltip div { margin-bottom: 6px; }
+#network.tooltip div:last-child { margin-bottom: 0; }
+
+/* =========================================
+   TRAY (PILL-STYLE BACKGROUND)
+   ========================================= */
+#tray {
+    padding: 4px 12px;
+    margin-left: 4px;
+    margin-right: 4px;
+    border-radius: 999px;
+    background:
+        linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0.08),
+            rgba(255, 255, 255, 0.02)
+        );
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.25),
+        0 2px 6px rgba(0, 0, 0, 0.25);
+    transition:
+        background 200ms ease,
+        border-color 200ms ease,
+        box-shadow 200ms ease;
+}
+
+#tray:hover {
+    background:
+        linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0.12),
+            rgba(255, 255, 255, 0.04)
+        );
+    border-color: rgba(255, 255, 255, 0.35);
+}

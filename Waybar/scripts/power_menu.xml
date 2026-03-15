@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk+" version="3.0"/>
+
+  <object class="GtkMenu" id="menu">
+    <property name="visible">True</property>
+
+    <child>
+      <object class="GtkMenuItem" id="suspend">
+        <property name="visible">True</property>
+        <property name="label">Suspend</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="hibernate">
+        <property name="visible">True</property>
+        <property name="label">Hibernate</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="shutdown">
+        <property name="visible">True</property>
+        <property name="label">Shutdown</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkSeparatorMenuItem">
+        <property name="visible">True</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="reboot">
+        <property name="visible">True</property>
+        <property name="label">Reboot</property>
+      </object>
+    </child>
+
+  </object>
+</interface>

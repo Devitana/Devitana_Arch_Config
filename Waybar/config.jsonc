@@ -1,0 +1,199 @@
+{
+  /* ---------- GENERAL SETTINGS ---------- */
+  "layer": "top",
+  "output": "DP-1",
+  "position": "top",
+  "height": 48,
+  "exclusive": true,
+  "reload_style_on_change": true,
+  "fixed-center": true,
+
+  /* ---------- MODULES LEFT ---------- */
+  "modules-left": [
+    "hyprland/workspaces",
+    "custom/chatgpt",
+    "custom/firefox",
+    "custom/files",
+    "wlr/taskbar"
+  ],
+
+  /* ---------- LEFT MODULES DETAILS ---------- */
+  "hyprland/workspaces": {
+    "format": "{id}",
+    "disable-scroll": true
+  },
+
+"custom/chatgpt": {
+  "format": "{icon}",
+  "format-icons": ["\uf544"],
+  "on-click": "xdg-open https://chat.openai.com",
+  "tooltip": false
+},
+
+"custom/firefox": {
+  "format": "",      // Official Firefox icon
+  "on-click": "firefox",
+  "on-click-right": "chromium",
+  "on-click-middle": "vivaldi",
+  "tooltip": false
+},
+
+"custom/files": {
+  "format": "",      // Folder 
+  "on-click": "nautilus",
+  "on-click-right": "krusader",
+  "tooltip": false
+},
+
+  "wlr/taskbar": {
+    "icon-size": 32,
+    "tooltip": false,
+    "format": "{icon}",
+    "on-click": "activate"
+  },
+
+  /* ---------- MODULES CENTER ---------- */
+  "modules-center": [
+    "custom/arch"
+  ],
+
+  /* ---------- CENTER MODULES DETAILS ---------- */
+
+  "custom/arch": {
+    "format": "",
+    "tooltip": false,
+    "on-click": "wofi --show drun"
+  },
+  
+  /* ---------- MODULES RIGHT ---------- */
+  "modules-right": [
+    "network",
+    "custom/weather",
+    "clock#date",
+    "clock#time",
+    "group/system",
+    "custom/power"
+  ],
+
+  /* ---------- RIGHT MODULES DETAILS ---------- */
+
+  "network": {
+    "format": "<span color=\"#ff6b6b\">{bandwidthUpBits} ↑</span> <span color=\"#6bff95\">{bandwidthDownBits} ↓</span>",
+    "format-disconnected": "<span color=\"#ff6b6b\">Down</span>",
+    "tooltip-format": "{ipaddr}"
+  },
+
+  "custom/weather": {
+    "exec": "~/.config/waybar/scripts/weather.sh",
+    "interval": 1800,
+    "return-type": "json",
+    "tooltip": true,
+    "signal": 2                  
+  },
+
+"clock#date": {
+    "interval": 60,
+    "format": "{:%d-%B-%Y}",
+    "tooltip": true,
+    "on-click-middle": "thunderbird",
+    "tooltip-format": "<tt><small>{calendar}</small></tt>",
+    "calendar": {
+        "mode": "year",
+        "mode-mon-col": 3,
+        "weeks-pos": "right",
+        "on-scroll": 1,
+        "format": {
+            "months":   "<span color='#ffead3'><b>{}</b></span>",
+            "days":     "<span color='#ecc6d9'><b>{}</b></span>",
+            "weeks":    "<span color='#99ffdd'><b>W{}</b></span>",
+            "weekdays": "<span color='#ffcc66'><b>{}</b></span>",
+            "today":    "<span color='#ff6699'><b><u>{}</u></b></span>"
+        }
+    },
+    "actions": {
+        "on-click-right": "mode",
+        "on-scroll-up": "shift_up",
+        "on-scroll-down": "shift_down"
+    }
+},
+
+  "clock#time": {
+    "interval": 60,
+    "format": "<span size='large' weight='bold'>{:%H:%M}</span>",
+    "tooltip": false
+},
+
+  "group/system": {
+    "orientation": "horizontal",
+    "drawer": {
+      "transition-duration": 500,
+      "transition-left-to-right": true,
+      "children-class": "system-hidden",
+      "click-to-reveal": true 
+    },
+    "modules": [
+      "custom/arrow",
+      "pulseaudio",
+      "custom/updates",
+      "memory",
+      "tray"
+    ]
+  },
+
+  "custom/arrow": {
+    "format": "❮❯",  // Or "▶" for a filled triangle, or "›" for thinner
+    "tooltip": false
+  },
+
+  "pulseaudio": {
+    "format": "{icon} {volume}%",
+    "format-muted": "󰝟 Muted",
+    "format-icons": {
+      "muted": "󰝟",
+      "default": [
+        "󰕿",
+        "󰖀",
+        "󰕾"
+      ]
+    },
+    "on-click": "pavucontrol"
+  },
+
+  "custom/updates": {
+    "format": " {}",
+    "escape": true,
+    "return-type": "json",
+    "exec": "~/.config/waybar/scripts/updates.sh",
+    "exec-if": "ping -c1 archlinux.org >/dev/null 2>&1",
+    "interval": 1800,
+    "signal": 1,
+    "hide-empty-text": true,
+    "on-click": "kitty ~/.config/waybar/scripts/installupdates.sh",
+    "tooltip": false
+  },  
+
+  "memory": {
+    "interval": 30,
+    "format": "{used:0.1f}/{total:0.1f}GB",
+    "on-click": "~/.config/waybar/scripts/system-monitor.sh",
+    "tooltip": false
+  },
+
+  "tray": {
+    "spacing": 10
+  },
+
+  "custom/power": {
+    "format": "⏻",
+    "tooltip": false,
+    "menu": "on-click",
+    "menu-file": "~/.config/waybar/scripts/power_menu.xml",
+    "menu-actions": {
+        "suspend": "systemctl suspend",
+        "hibernate": "systemctl hibernate",
+        "reboot": "systemctl reboot",
+        "shutdown": "systemctl poweroff"
+    }
+    
+  }
+}
