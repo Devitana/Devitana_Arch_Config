@@ -2,14 +2,10 @@
 
 Personal Arch Linux Waybar configuration with custom scripts and styling.
 
+
 This is my first project since moving to Linux about a year ago. I had no coding experience before this—only some basic knowledge.
 Please be kind. I did use AI to help me, and I worked on this project for about one hour each night. It took me more than three months to finish.
 Any feedback would be greatly appreciated. If you find this project interesting, I would be very happy if you tried it.
-
-## Preview
-
-![waybar](screenshots/2026-03-15_23-14.png)
-![waybar](screenshots/2026-03-15_23-00.png)
 
 ## Features
 
