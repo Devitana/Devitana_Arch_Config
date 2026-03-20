@@ -85,10 +85,12 @@
 
   "custom/weather": {
     "exec": "~/.config/waybar/scripts/weather.sh",
-    "interval": 1800,
+    "interval": 1200,
     "return-type": "json",
     "tooltip": true,
-    "signal": 2                  
+    "signal": 2,
+    "on-click": "xdg-open https://wttr.in/Memmingen",
+    "on-click-right": "pkill -RTMIN+2 waybar"                  
   },
 
 "clock#date": {
