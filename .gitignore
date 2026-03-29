@@ -1,0 +1,23 @@
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build folders
+bin/
+dist/
+build/
+
+# Logs
+*.log
+
+# Env files
+.env
+
+# Custom
+AGENTS.md
+comments.json
+.idea/vcs.xml
