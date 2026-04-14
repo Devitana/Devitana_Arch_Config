@@ -1,9 +1,9 @@
 # Devitana Arch Config
 
-Personal Arch Linux Waybar configuration with custom scripts and styling.
+Personal Arch Linux Waybar + Hyprland configuration with custom scripts and styling.
 
-This is my first project since moving to Linux about a year ago. I had no coding experience before this—only some basic knowledge.
-Please be kind. I did use AI to help me, and I worked on this project for about one hour each night. It took me more than three months to finish.
+This is my first project since moving to Linux about a year ago. I had no coding experience before this—only some basic knowledge.  
+Please be kind. I did use AI to help me, and I worked on this project for about one hour each night. It took me more than three months to finish.  
 Any feedback would be greatly appreciated. If you find this project interesting, I would be very happy if you tried it.
 
 ## Preview
@@ -13,10 +13,12 @@ Any feedback would be greatly appreciated. If you find this project interesting,
 
 ## Features
 
+- **Hyprland Wayland Desktop** - Lightweight tiling compositor
 - **Waybar Status Bar** - Customized for Wayland environments
 - **Custom Scripts** - Weather, system updates, system monitoring
 - **Modular Design** - Easy to customize and extend
 - **Glass Morphism UI** - Modern visual design
+- **GPU Auto Setup** - Automatically installs AMD/NVIDIA/Intel drivers
 
 ## Quick Start
 
@@ -29,31 +31,32 @@ chmod +x install.sh
 
 The script will:
 
-- Install core Waybar dependencies
-- Copy config to `~/.config/waybar`
-- Make scripts executable
+- Installs core Hyprland + Waybar dependencies
+- Installs PipeWire audio stack
+- Installs greetd login manager
+- Detects and installs GPU drivers automatically
+- Copies config to ~/.config
+- Backs up existing configs automatically
+- Enables required system services
 
 ## Core Dependencies
 
+- **hyprland** - Wayland compositor
 - **waybar** - Status bar
+- **kitty** - terminal
 - **ttf-font-awesome** - Icons
 - **noto-fonts** - Font support
 - **jq** - JSON processor (for scripts)
 - **playerctl** - Media controls
-- **grim**, **slurp** - Screenshot tools
 - **wl-clipboard** - Clipboard management
+- **pipewire** - Audio system
+- **polkit** - Permission handling
 
 ## Optional Packages
 
 ```bash
-sudo pacman -S btop yay pavucontrol figlet
+sudo pacman -S "is up to you"
 ```
-
-- **btop** - System monitor
-- **yay** - AUR helper (for updates)
-- **pavucontrol** - Audio control
-- **figlet** - ASCII text art
-
 ## File Manager / Browser
 
 Waybar has built-in launchers for:
@@ -79,17 +82,7 @@ You can customize these in `~/.config/waybar/config.jsonc`:
 
 ### Weather Location
 
-Edit `~/.config/waybar/scripts/weather.sh`:
-
-```bash
-LOCATION="Memmingen"  # Change to your city
-```
-
-Or use environment variable:
-
-```bash
-export WEATHER_LOCATION="Berlin"
-```
+script uses auto detection
 
 ### Colors & Styling
 
