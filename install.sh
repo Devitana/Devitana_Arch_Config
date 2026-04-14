@@ -1,166 +1,191 @@
 #!/usr/bin/env bash
 
-# ============================================================================
-# COLOR CODES & LOGGING
-# ============================================================================
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+set -euo pipefail
 
-log_info() { echo -e "${BLUE}ℹ${NC} $1"; }
-log_success() { echo -e "${GREEN}✓${NC} $1"; }
-log_error() { echo -e "${RED}✗${NC} $1"; }
-log_warning() { echo -e "${YELLOW}⚠${NC} $1"; }
+### ========= CONFIG ========= ###
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_DIR="$REPO_DIR/configs"
+BACKUP_DIR="$HOME/.config-backup-$(date +%s)"
 
-set -e
-trap 'log_error "Installation failed at line $LINENO"; exit 1' ERR
+### ========= LOGGING ========= ###
+log() { echo -e "\e[1;32m[INFO]\e[0m $1"; }
+warn() { echo -e "\e[1;33m[WARN]\e[0m $1"; }
+err()  { echo -e "\e[1;31m[ERROR]\e[0m $1"; exit 1; }
 
-# ============================================================================
-# SYSTEM CHECKS
-# ============================================================================
+### ========= CHECKS ========= ###
+require_user() {
+    [[ $EUID -eq 0 ]] && err "Do NOT run as root"
+}
 
-log_info "Checking system requirements..."
+### ========= GPU DETECTION ========= ###
+install_gpu_drivers() {
+    log "Detecting GPU..."
 
-if ! command -v pacman &>/dev/null; then
-    log_error "pacman not found. This requires Arch Linux."
-    exit 1
-fi
-log_success "Arch Linux detected"
+    GPU=$(lspci | grep -E "VGA|3D")
 
-if [[ $EUID -eq 0 ]]; then
-    log_error "Do not run as root. sudo will be used when needed."
-    exit 1
-fi
-log_success "Running as regular user"
+    if echo "$GPU" | grep -qi "AMD"; then
+        log "AMD GPU detected"
+        sudo pacman -S --noconfirm \
+            mesa vulkan-radeon libva-mesa-driver \
+            vulkan-tools mesa-utils
 
-if ! command -v sudo &>/dev/null; then
-    log_error "sudo is not installed"
-    exit 1
-fi
-log_success "sudo is available"
+    elif echo "$GPU" | grep -qi "NVIDIA"; then
+        log "NVIDIA GPU detected"
+        sudo pacman -S --noconfirm \
+            nvidia nvidia-utils nvidia-settings
 
-# ============================================================================
-# VERIFY REPOSITORY
-# ============================================================================
+    elif echo "$GPU" | grep -qi "Intel"; then
+        log "Intel GPU detected"
+        sudo pacman -S --noconfirm \
+            mesa vulkan-intel intel-media-driver
 
-log_info "Verifying repository structure..."
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-if [[ ! -d "$SCRIPT_DIR/Waybar" ]]; then
-    log_error "Waybar directory not found"
-    exit 1
-fi
-log_success "Waybar directory found"
-
-# ============================================================================
-# CORE DEPENDENCIES ONLY (Required for Waybar to function)
-# ============================================================================
-
-log_info "Installing Waybar core dependencies..."
-
-PACKAGES=(
-    waybar                # The status bar itself
-    ttf-font-awesome      # Icons for waybar modules
-    noto-fonts            # Font support
-    jq                    # Required by weather.sh script
-    playerctl             # For media player controls
-    grim                  # Screenshot tool
-    slurp                 # Region selection tool
-    wl-clipboard          # Clipboard management for Wayland
-)
-
-# Check which packages need installation
-PACKAGES_TO_INSTALL=()
-for package in "${PACKAGES[@]}"; do
-    if pacman -Q "$package" &>/dev/null; then
-        log_success "$package already installed"
     else
-        PACKAGES_TO_INSTALL+=("$package")
+        warn "Unknown GPU — skipping drivers"
     fi
-done
+}
 
-if [[ ${#PACKAGES_TO_INSTALL[@]} -gt 0 ]]; then
-    log_info "Installing ${#PACKAGES_TO_INSTALL[@]} package(s)..."
-    sudo pacman -S --needed --noconfirm "${PACKAGES_TO_INSTALL[@]}"
-    log_success "Dependencies installed"
-else
-    log_success "All core dependencies already installed"
-fi
+### ========= CORE ========= ###
+install_core() {
+    log "Installing core system..."
 
-# ============================================================================
-# OPTIONAL DEPENDENCIES (User can install separately if needed)
-# ============================================================================
+    sudo pacman -Syu --noconfirm
 
-log_info ""
-log_info "Optional packages (install manually if desired):"
-echo "  • btop              - System monitor (for system-monitor.sh)"
-echo "  • figlet            - ASCII art text (for installupdates.sh)"
-echo "  • yay or paru       - AUR helper (for AUR package updates)"
-echo "  • flatpak           - Flatpak package manager"
-echo "  • pavucontrol       - Audio control (on-click for pulseaudio module)"
-echo ""
+    CORE_PKGS=(
+        hyprland
+        hyprlauncher
+        waybar
+        kitty
+        greetd
 
-# ============================================================================
-# INSTALL WAYBAR CONFIG
-# ============================================================================
+        networkmanager
+        bluez
+        bluez-utils
 
-log_info "Installing Waybar configuration..."
+        pipewire
+        pipewire-alsa
+        pipewire-pulse
+        wireplumber
 
-CONFIG_DIR="$HOME/.config/waybar"
+        polkit
+        polkit-gnome
 
-# Backup existing config
-if [[ -d "$CONFIG_DIR" ]]; then
-    log_warning "Existing Waybar config found at $CONFIG_DIR"
-    read -p "Create backup? (y/n) " -n 1 -r
-    echo
-    
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        BACKUP_DIR="$CONFIG_DIR.backup.$(date +%Y%m%d_%H%M%S)"
-        cp -r "$CONFIG_DIR" "$BACKUP_DIR"
-        log_success "Backup created: $BACKUP_DIR"
-    fi
-fi
+        xdg-desktop-portal-hyprland
+        xdg-user-dirs
 
-mkdir -p "$CONFIG_DIR"
-cp -r "$SCRIPT_DIR/Waybar"/* "$CONFIG_DIR/"
-log_success "Configuration files installed"
+        wl-clipboard
+        grim
+        slurp
 
-# ============================================================================
-# MAKE SCRIPTS EXECUTABLE
-# ============================================================================
+        seatd
 
-log_info "Making scripts executable..."
+        ttf-dejavu
+        ttf-font-awesome
+        noto-fonts
 
-if [[ -d "$CONFIG_DIR/scripts" ]]; then
-    chmod +x "$CONFIG_DIR"/scripts/*.sh 2>/dev/null || true
-    SCRIPT_COUNT=$(find "$CONFIG_DIR/scripts" -name "*.sh" -type f | wc -l)
-    log_success "Made $SCRIPT_COUNT script(s) executable"
-fi
+        git
+        base-devel
+    )
 
-# ============================================================================
-# COMPLETION
-# ============================================================================
+    for pkg in "${CORE_PKGS[@]}"; do
+        if ! pacman -Qi "$pkg" &>/dev/null; then
+            log "Installing $pkg"
+            sudo pacman -S --noconfirm "$pkg"
+        fi
+    done
 
-echo ""
-log_success "Installation complete!"
-echo ""
-echo -e "${BLUE}Next steps:${NC}"
-echo "  1. Review config: $CONFIG_DIR"
-echo "  2. (Optional) Install optional packages:"
-echo "     sudo pacman -S btop yay pavucontrol"
-echo "  3. Restart Waybar:"
-echo "     ${YELLOW}killall waybar; waybar &${NC}"
-echo ""
+    install_gpu_drivers
+}
 
-read -p "Restart Waybar now? (y/n) " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    killall waybar 2>/dev/null || true
-    waybar &
-    log_success "Waybar restarted"
-fi
+### ========= APPS ========= ###
+install_apps() {
+    log "Installing optional apps..."
 
-exit 0
+    APP_PKGS=(
+        thunderbird
+        chromium
+        vivaldi
+        krusader
+        nautilus
+        mission-center
+        htop
+        dunst
+        network-manager-applet
+    )
+
+    for pkg in "${APP_PKGS[@]}"; do
+        if ! pacman -Qi "$pkg" &>/dev/null; then
+            log "Installing $pkg"
+            sudo pacman -S --noconfirm "$pkg" || warn "Failed: $pkg"
+        fi
+    done
+}
+
+### ========= CONFIGS ========= ###
+install_configs() {
+    log "Installing configs..."
+
+    mkdir -p "$HOME/.config"
+    mkdir -p "$BACKUP_DIR"
+
+    for dir in "$CONFIG_DIR"/*; do
+        name=$(basename "$dir")
+        target="$HOME/.config/$name"
+
+        if [[ -d "$target" ]]; then
+            warn "Backing up $name"
+            mv "$target" "$BACKUP_DIR/"
+        fi
+
+        cp -r "$dir" "$target"
+        log "Installed $name"
+    done
+}
+
+### ========= SERVICES ========= ###
+enable_services() {
+    log "Enabling services..."
+
+    SERVICES=(
+        NetworkManager
+        bluetooth
+        seatd
+    )
+
+    for svc in "${SERVICES[@]}"; do
+        sudo systemctl enable "$svc" --now || warn "Failed: $svc"
+    done
+}
+
+### ========= GREETD ========= ###
+setup_greetd() {
+    log "Configuring greetd..."
+
+    sudo mkdir -p /etc/greetd
+
+    sudo bash -c "cat > /etc/greetd/config.toml <<EOF
+[terminal]
+vt = 1
+
+[default_session]
+command = \"Hyprland\"
+user = \"$USER\"
+EOF"
+}
+
+### ========= MAIN ========= ###
+main() {
+    require_user
+
+    log "Starting Devitana Arch setup (official repos only)..."
+
+    install_core
+    install_apps
+    install_configs
+    enable_services
+    setup_greetd
+
+    log "Setup complete!"
+    log "Reboot recommended."
+}
+
+main
