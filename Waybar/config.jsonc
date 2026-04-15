@@ -85,12 +85,12 @@
 
   "custom/weather": {
     "exec": "~/.config/waybar/scripts/weather.sh",
-    "interval": 1200,
+    "interval": 1800,
     "return-type": "json",
     "tooltip": true,
     "signal": 2,
     "on-click": "xdg-open https://wttr.in/Memmingen",
-    "on-click-right": "pkill -RTMIN+2 waybar"                  
+    "on-click-right": "pkill -RTMIN+2 waybar"
   },
 
 "clock#date": {
@@ -131,13 +131,15 @@
       "transition-duration": 500,
       "transition-left-to-right": true,
       "children-class": "system-hidden",
-      "click-to-reveal": true 
+      "click-to-reveal": true
     },
     "modules": [
       "custom/arrow",
       "pulseaudio",
       "custom/updates",
       "memory",
+      "custom/kb",
+      "privacy",
       "tray"
     ]
   },
@@ -172,13 +174,42 @@
     "hide-empty-text": true,
     "on-click": "kitty ~/.config/waybar/scripts/installupdates.sh",
     "tooltip": false
-  },  
+  },
 
   "memory": {
     "interval": 30,
     "format": "{used:0.1f}/{total:0.1f}GB",
     "on-click": "missioncenter",
     "tooltip": false
+  },
+
+  "custom/kb": {
+    "exec": "~/.config/waybar/scripts/kb.sh",
+    "interval": 1,
+    "return-type": "json",
+    "format": "{text}",
+    "class": "{class}",
+    "tooltip": false
+  },
+
+  "privacy": {
+    "icon-spacing": 4,
+    "icon-size": 14,
+    "transition-duration": 250,
+    "modules": [
+      {
+        "type": "screenshare",
+        "tooltip": true
+      },
+      {
+        "type": "audio-in",
+        "tooltip": true
+      },
+      {
+        "type": "audio-out",
+        "tooltip": false
+      }
+    ]
   },
 
   "tray": {

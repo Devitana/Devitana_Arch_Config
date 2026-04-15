@@ -22,13 +22,10 @@ window#waybar {
 #workspaces button {
     padding: 0px 2px;
     margin: 0 2px;
-
     font-size: 14px;
     color: rgba(255, 255, 255, 0.65);
-
     border-radius: 12px;
     background: rgba(255, 255, 255, 0.04);
-
     transition:
         background 200ms ease,
         color 200ms ease,
@@ -51,7 +48,6 @@ window#waybar {
             rgba(255, 255, 255, 0.15) 60%,
             rgba(255, 255, 255, 0.05) 100%
         );
-
     box-shadow:
         inset 0 0 0 1px rgba(255, 255, 255, 0.25),
         0 4px 10px rgba(0, 0, 0, 0.35);
@@ -66,9 +62,7 @@ window#waybar {
     margin: 0 2px;
     color: rgba(255, 255, 255, 0.85);
     border-radius: 12px;
-
     background: rgba(255, 255, 255, 0.04);
-
     transition:
         background 200ms ease,
         color 200ms ease,
@@ -87,7 +81,6 @@ window#waybar {
             rgba(255, 255, 255, 0.12) 50%,
             rgba(255, 255, 255, 0.04) 100%
         );
-
     box-shadow:
         0 4px 12px rgba(0, 0, 0, 0.35);
 }
@@ -110,10 +103,8 @@ window#waybar {
 #taskbar button {
     padding: 6px;
     margin: 0 4px;
-
     border-radius: 12px;
     background: rgba(255, 255, 255, 0.04);
-
     transition:
         background 200ms ease,
         box-shadow 200ms ease,
@@ -134,7 +125,6 @@ window#waybar {
             rgba(255, 255, 255, 0.15) 60%,
             rgba(255, 255, 255, 0.05) 100%
         );
-
     box-shadow:
         inset 0 0 0 1px rgba(255, 255, 255, 0.25),
         0 4px 12px rgba(0, 0, 0, 0.45);
@@ -152,8 +142,8 @@ window#waybar {
 
 /* Arch Linux button - official blue with glass style */
 #custom-arch {
-    color: #1793d1;             
-    font-size: 36px;            
+    color: #1793d1;
+    font-size: 36px;
     font-weight: bold;
     padding: 0 8px;
     margin: 0px 4px;           /* Matches your drawer spacing - adjust as needed */
@@ -226,8 +216,9 @@ menuitem:hover {
     background-color: rgba(255, 255, 255, 0.1);
 }
 
+
 /* =========================================
-   DRAWER ARROW
+                DRAWER ARROW
    ========================================= */
 #custom-arrow {
     font-size: 12px;
@@ -274,7 +265,7 @@ menuitem:hover {
 }
 
 /* =========================================
-   HIDDEN DRAWER ITEMS
+            HIDDEN DRAWER ITEMS
    ========================================= */
 .system-hidden {
     background: transparent;
@@ -282,7 +273,7 @@ menuitem:hover {
 }
 
 /* =========================================
-   PULSE AUDIO
+                PULSE AUDIO
    ========================================= */
 #pulseaudio {
     font-size: 15px;
@@ -328,7 +319,7 @@ menuitem:hover {
 }
 
 /* =========================================
-   UPDATES MODULE
+                UPDATES MODULE
    ========================================= */
 #custom-updates {
     font-size: 15px;
@@ -378,7 +369,7 @@ menuitem:hover {
 }
 
 /* =========================================
-   MEMORY
+                    MEMORY
    ========================================= */
 #memory {
     font-size: 15px;
@@ -415,7 +406,7 @@ menuitem:hover {
 }
 
 /* =========================================
-   CLOCK
+                    CLOCK
    ========================================= */
 #clock {
     font-size: 15px;
@@ -485,7 +476,7 @@ tooltip box {
 }
 
 /* =========================================
-   WEATHER
+                    WEATHER
    ========================================= */
 #custom-weather {
     font-size: 15px;
@@ -545,7 +536,7 @@ tooltip box {
 #custom-weather.tooltip div:last-child { margin-bottom: 0; }
 
 /* =========================================
-   NETWORK
+                    NETWORK
    ========================================= */
 #network {
     font-size: 15px;
@@ -608,7 +599,7 @@ tooltip box {
 #network.tooltip div:last-child { margin-bottom: 0; }
 
 /* =========================================
-   TRAY (PILL-STYLE BACKGROUND)
+                    TRAY
    ========================================= */
 #tray {
     padding: 4px 12px;
@@ -639,4 +630,71 @@ tooltip box {
             rgba(255, 255, 255, 0.04)
         );
     border-color: rgba(255, 255, 255, 0.35);
+}
+
+/* =========================================
+                    PRIVACY
+   ========================================= */
+
+#privacy {
+    font-size: 15px;
+    padding: 0 10px;
+    margin-left: 4px;
+    border-radius: 999px;
+    color: rgba(255, 255, 255, 0.9);
+    background:
+        linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0.08),
+            rgba(255, 255, 255, 0.02)
+        );
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.25),
+        0 2px 6px rgba(0, 0, 0, 0.25);
+    transition:
+        background 200ms ease,
+        border-color 200ms ease,
+        box-shadow 200ms ease;
+}
+
+#privacy:hover {
+    background:
+        linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0.12),
+            rgba(255, 255, 255, 0.04)
+        );
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+/* =========================================
+                    KEYBOARD
+   ========================================= */
+
+#custom-kb {
+    font-size: 15px;
+    padding: 0 10px;
+    margin-left: 4px;
+    border-radius: 999px;
+    color: white;
+    font-weight: 300;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* DEFAULT CAPS */
+#custom-kb.caps-on {
+    font-weight: 900;
+}
+
+/* DEFAULT NUM */
+#custom-kb.num-on {
+    color: #a6e3a1;
+}
+
+/* BOTH ACTIVE */
+#custom-kb.caps-on-num-on {
+    font-weight: 900;
+    color: #a6e3a1;
 }
