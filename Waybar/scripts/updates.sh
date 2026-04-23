@@ -105,7 +105,7 @@ fi
 if [[ $UPDATES -gt $THRESHOLD_RED ]]; then
     CSS_CLASS="updates-red"
     # Auto-notify on critical
-    notify-send -u critical "Critical Updates" "$UPDATES updates available! Please update soon." 2>/dev/null || true
+    notify-send -u critical -t 10000 "Critical Updates" "$UPDATES updates available! Please update soon." 2>/dev/null || true
 elif [[ $UPDATES -gt $THRESHOLD_YELLOW ]]; then
     CSS_CLASS="updates-yellow"
 else
