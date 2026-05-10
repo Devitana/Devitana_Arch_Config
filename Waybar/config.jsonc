@@ -1,7 +1,7 @@
 {
   /* ---------- GENERAL SETTINGS ---------- */
   "layer": "top",
-  "output": "DP-1",
+  /*"output": "DP-1",*/
   "position": "top",
   "height": 48,
   "exclusive": true,
