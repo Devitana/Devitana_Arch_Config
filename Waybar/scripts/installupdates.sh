@@ -163,6 +163,109 @@ else
 fi
 
 # ============================================================================
+# CLEANUP
+# ============================================================================
+echo
+log_info "Running post-update cleanup..."
+
+# PACMAN cleanup
+if command -v pacman >/dev/null 2>&1; then
+    if sudo pacman -Sc --noconfirm; then
+        log_success "pacman cache cleaned"
+        echo "$(date '+%Y-%m-%d %H:%M:%S'): pacman cache cleaned" >> "$UPDATE_LOG" 2>/dev/null
+    else
+        log_warning "pacman cache cleanup failed (continuing...)"
+        echo "$(date '+%Y-%m-%d %H:%M:%S'): pacman cache cleanup failed" >> "$UPDATE_LOG" 2>/dev/null
+    fi
+
+    # Remove orphaned packages only when list is non-empty
+    orphans="$(pacman -Qdtq 2>/dev/null || true)"
+    if [[ -n "$orphans" ]]; then
+        if sudo pacman -Rns --noconfirm $orphans; then
+            log_success "orphan packages removed"
+            echo "$(date '+%Y-%m-%d %H:%M:%S'): orphan packages removed" >> "$UPDATE_LOG" 2>/dev/null
+        else
+            log_warning "orphan package removal failed (continuing...)"
+            echo "$(date '+%Y-%m-%d %H:%M:%S'): orphan package removal failed" >> "$UPDATE_LOG" 2>/dev/null
+        fi
+    else
+        log_info "No orphan packages to remove"
+        echo "$(date '+%Y-%m-%d %H:%M:%S'): no orphan packages" >> "$UPDATE_LOG" 2>/dev/null
+    fi
+fi
+
+# PARU cleanup
+if command -v paru >/dev/null 2>&1; then
+    if paru -Sc --noconfirm; then
+        log_success "paru cache cleaned"
+        echo "$(date '+%Y-%m-%d %H:%M:%S'): paru cache cleaned" >> "$UPDATE_LOG" 2>/dev/null
+    else
+        log_warning "paru cache cleanup failed (continuing...)"
+        echo "$(date '+%Y-%m-%d %H:%M:%S'): paru cache cleanup failed" >> "$UPDATE_LOG" 2>/dev/null
+    fi
+
+    # Remove unneeded AUR dependencies via paru
+    aur_orphans="$(paru -Qdtq 2>/dev/null || true)"
+    if [[ -n "$aur_orphans" ]]; then
+        if paru -Rns --noconfirm $aur_orphans; then
+            log_success "paru: unneeded dependencies removed"
+            echo "$(date '+%Y-%m-%d %H:%M:%S'): paru unneeded deps removed" >> "$UPDATE_LOG" 2>/dev/null
+        else
+            log_warning "paru: unneeded dependency removal failed (continuing...)"
+            echo "$(date '+%Y-%m-%d %H:%M:%S'): paru unneeded deps removal failed" >> "$UPDATE_LOG" 2>/dev/null
+        fi
+    else
+        log_info "paru: no unneeded dependencies to remove"
+    fi
+fi
+
+# YAY cleanup
+if command -v yay >/dev/null 2>&1; then
+    if yay -Sc --noconfirm; then
+        log_success "yay cache cleaned"
+        echo "$(date '+%Y-%m-%d %H:%M:%S'): yay cache cleaned" >> "$UPDATE_LOG" 2>/dev/null
+    else
+        log_warning "yay cache cleanup failed (continuing...)"
+        echo "$(date '+%Y-%m-%d %H:%M:%S'): yay cache cleanup failed" >> "$UPDATE_LOG" 2>/dev/null
+    fi
+
+    # Remove unneeded AUR dependencies via yay
+    yay_orphans="$(yay -Qdtq 2>/dev/null || true)"
+    if [[ -n "$yay_orphans" ]]; then
+        if yay -Rns --noconfirm $yay_orphans; then
+            log_success "yay: unneeded dependencies removed"
+            echo "$(date '+%Y-%m-%d %H:%M:%S'): yay unneeded deps removed" >> "$UPDATE_LOG" 2>/dev/null
+        else
+            log_warning "yay: unneeded dependency removal failed (continuing...)"
+            echo "$(date '+%Y-%m-%d %H:%M:%S'): yay unneeded deps removal failed" >> "$UPDATE_LOG" 2>/dev/null
+        fi
+    else
+        log_info "yay: no unneeded dependencies to remove"
+    fi
+fi
+
+# FLATPAK cleanup
+if command -v flatpak >/dev/null 2>&1; then
+    if flatpak uninstall --unused -y; then
+        log_success "unused flatpaks removed"
+        echo "$(date '+%Y-%m-%d %H:%M:%S'): flatpak unused removed" >> "$UPDATE_LOG" 2>/dev/null
+    else
+        log_warning "flatpak cleanup failed (continuing...)"
+        echo "$(date '+%Y-%m-%d %H:%M:%S'): flatpak cleanup failed" >> "$UPDATE_LOG" 2>/dev/null
+    fi
+fi
+
+# TEMP cleanup
+log_info "Clearing temporary files..."
+if rm -rf /tmp/* 2>/dev/null; then
+    log_success "temporary files cleared"
+    echo "$(date '+%Y-%m-%d %H:%M:%S'): /tmp cleared" >> "$UPDATE_LOG" 2>/dev/null
+else
+    log_warning "/tmp cleanup partially failed (some files may be in use, continuing...)"
+    echo "$(date '+%Y-%m-%d %H:%M:%S'): /tmp cleanup partial" >> "$UPDATE_LOG" 2>/dev/null
+fi
+
+# ============================================================================
 # RELOAD WAYBAR & NOTIFY
 # ============================================================================
 echo
