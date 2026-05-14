@@ -1,10 +1,8 @@
 # Devitana Arch Config
 
-Personal Arch Linux Waybar + Hyprland configuration with custom scripts and styling.
+Personal Arch Linux Hyprland + Waybar configuration with custom scripts and styling.
 
-This is my first project since moving to Linux about a year ago. I had no coding experience before this—only some basic knowledge.  
-Please be kind. I did use AI to help me, and I worked on this project for about one hour each night. It took me more than three months to finish.  
-Any feedback would be greatly appreciated. If you find this project interesting, I would be very happy if you tried it.
+This is my first Linux project after moving from Windows. I built it over a few months with nightly progress and AI assistance. Feedback is always welcome.
 
 ## Preview
 
@@ -13,118 +11,107 @@ Any feedback would be greatly appreciated. If you find this project interesting,
 
 ## Features
 
-- **Hyprland Wayland Desktop** - Lightweight tiling compositor
-- **Waybar Status Bar** - Customized for Wayland environments
-- **Custom Scripts** - Weather, system updates, system monitoring
-- **Modular Design** - Easy to customize and extend
-- **Glass Morphism UI** - Modern visual design
-- **GPU Auto Setup** - Automatically installs AMD/NVIDIA/Intel drivers
+- **Hyprland desktop** with modular split config files
+- **Waybar setup** with custom weather, update, keyboard, and power modules
+- **Installer script** with GPU detection and service setup
+- **Dry-run mode** to preview installer actions safely
+- **Automatic backup** of replaced configs and dotfiles
 
 ## Quick Start
+
+### Normal install
 
 ```bash
 git clone https://github.com/Devitana/Devitana_Arch_Config.git
 cd Devitana_Arch_Config
-chmod +x install.sh
-./install.sh
+bash install.sh
 ```
 
-The script will:
-
-- Installs core Hyprland + Waybar dependencies
-- Installs PipeWire audio stack
-- Installs greetd login manager
-- Detects and installs GPU drivers automatically
-- Copies config to ~/.config
-- Backs up existing configs automatically
-- Enables required system services
-
-## Core Dependencies
-
-- **hyprland** - Wayland compositor
-- **waybar** - Status bar
-- **kitty** - terminal
-- **ttf-font-awesome** - Icons
-- **noto-fonts** - Font support
-- **jq** - JSON processor (for scripts)
-- **playerctl** - Media controls
-- **wl-clipboard** - Clipboard management
-- **pipewire** - Audio system
-- **polkit** - Permission handling
-
-## Optional Packages
+### Dry-run (preview only)
 
 ```bash
-sudo pacman -S "is up to you"
+git clone https://github.com/Devitana/Devitana_Arch_Config.git
+cd Devitana_Arch_Config
+bash install.sh --dry-run
 ```
-## File Manager / Browser
 
-Waybar has built-in launchers for:
+### What gets installed/copied
 
-- **Firefox** (or Chromium/Vivaldi)
-- **File Manager** (nautilus/krusader)
-- **ChatGPT** quick link
+- Installs core packages (`hyprland`, `waybar`, `kitty`, `jq`, `playerctl`, `python`, `python-requests`, PipeWire stack, etc.)
+- Detects GPU and installs matching drivers (AMD/NVIDIA/Intel)
+- Copies configs to `~/.config/hypr`, `~/.config/kitty`, and `~/.config/waybar`
+- Copies repo `.bashrc` to `~/.bashrc`
+- Backs up replaced files to `~/.config-backup-<timestamp>/`
+- Enables services: `NetworkManager`, `bluetooth`, `seatd`
 
-You can customize these in `~/.config/waybar/config.jsonc`:
+## Customization
+
+### Browser / file manager launcher buttons
+
+Edit `~/.config/waybar/config.jsonc`:
 
 ```jsonc
 "custom/firefox": {
-  "on-click": "firefox",           // Your preferred browser
+  "on-click": "firefox",
   "tooltip": false
 },
 "custom/files": {
-  "on-click": "nautilus",          // Your preferred file manager
+  "on-click": "nautilus",
   "tooltip": false
 }
 ```
 
-## Customization
+### Colors and layout
 
-### Weather Location
+- Edit `~/.config/waybar/style.css`
+- Edit `~/.config/waybar/config.jsonc`
 
-script uses auto detection
+### Weather module
 
-### Colors & Styling
+`waybar/scripts/weather.sh` uses Open-Meteo and supports:
 
-Edit `~/.config/waybar/style.css` for colors and layout.
+- `LAT` and `LON` environment variables
+- Cache settings via `WEATHER_CACHE_TIME`
 
-Edit `~/.config/waybar/config.jsonc` for module configuration.
+## Waybar Scripts
 
-## Scripts
-
-| Script | Purpose |
-|--------|---------|
-
-| `weather.sh` | Display current weather with forecast |
-| `updates.sh` | Check for system updates |
-| `installupdates.sh` | Install all updates (pacman/AUR/flatpak) |
-| `system-monitor.sh` | Open system monitor in terminal |
+| File | Purpose |
+|------|---------|
+| `weather.sh` | Current weather + forecast tooltip |
+| `updates.sh` | Counts available pacman/AUR/flatpak updates |
+| `installupdates.sh` | Interactive updater for pacman/AUR/flatpak |
+| `kb.sh` | Keyboard layout + caps/num lock status |
 
 ## Troubleshooting
 
-**Weather not working:**
+**Weather not working**
 
 - Check internet connection
-- Verify `jq` is installed: `pacman -Q jq`
+- Check Python requests: `python -c "import requests; print(requests.__version__)"`
 
-**Icons not displaying:**
+**Keyboard module not showing layout**
 
-- Install fonts: `sudo pacman -S ttf-font-awesome noto-fonts`
-- Rebuild font cache: `fc-cache -fv`
+- Verify `jq`: `pacman -Q jq`
 
-**Scripts not running:**
+**Media keys not working**
 
-- Make executable: `chmod +x ~/.config/waybar/scripts/*.sh`
+- Verify `playerctl`: `pacman -Q playerctl`
+
+**Scripts not running**
+
+```bash
+chmod +x ~/.config/waybar/scripts/*.sh
+```
 
 ## System Requirements
 
 - Arch Linux or Arch-based distro
-- Wayland environment (Sway, Hyprland, etc.)
+- Hyprland session
 - Bash shell
 
 ## License
 
-No license specified. Free to use and modify.
+MIT License. See `LICENSE`.
 
 ## Author
 
