@@ -89,7 +89,7 @@
     "return-type": "json",
     "tooltip": true,
     "signal": 2,
-    "on-click": "xdg-open https://wttr.in/Memmingen",
+    /*"on-click": "xdg-open https://wttr.in",*/
     "on-click-right": "pkill -RTMIN+2 waybar"
   },
 
