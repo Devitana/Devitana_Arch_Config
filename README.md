@@ -13,7 +13,7 @@ This is my first Linux project after moving from Windows. I built it over a few 
 
 - **Hyprland desktop** with modular split config files
 - **Waybar setup** with custom weather, update, keyboard, and power modules
-- **Installer script** with GPU detection and service setup
+- **Installer script** with GPU detection, service setup, and auto-generated `current_gpu.conf`
 - **Dry-run mode** to preview installer actions safely
 - **Automatic backup** of replaced configs and dotfiles
 
@@ -27,6 +27,8 @@ cd Devitana_Arch_Config
 bash install.sh
 ```
 
+> Scope: this project is **pacman-only** (Arch / Arch-based distros).
+
 ### Dry-run (preview only)
 
 ```bash
@@ -35,14 +37,40 @@ cd Devitana_Arch_Config
 bash install.sh --dry-run
 ```
 
+### Verify installed setup
+
+```bash
+bash install.sh --verify
+```
+
+This checks core commands, required config files, and whether `current_gpu.conf` is pointing to a GPU profile.
+
 ### What gets installed/copied
 
 - Installs core packages (`hyprland`, `waybar`, `kitty`, `jq`, `playerctl`, `python`, `python-requests`, PipeWire stack, etc.)
 - Detects GPU and installs matching drivers (AMD/NVIDIA/Intel)
+- Writes `~/.config/hypr/env_var/current_gpu.conf` to source the detected GPU profile
 - Copies configs to `~/.config/hypr`, `~/.config/kitty`, and `~/.config/waybar`
 - Copies repo `.bashrc` to `~/.bashrc`
 - Backs up replaced files to `~/.config-backup-<timestamp>/`
 - Enables services: `NetworkManager`, `bluetooth`, `seatd`
+
+## Personal Defaults vs Reusable Setup
+
+This repo is my personal daily setup first, but it is structured so others can use it too.
+
+Before first login on another machine, update these files:
+
+- `hypr/monitors/monitors.conf` (connector names, resolution, refresh rate, scale)
+- `hypr/keyboard/layout.conf` (`kb_layout`, variants/options)
+- `waybar/config.jsonc` launcher app choices (browser/file manager)
+- Optional weather env vars: `LAT`, `LON`, `WEATHER_CACHE_TIME`
+
+If your monitor outputs are unknown, start with a single safe line in `monitors.conf`:
+
+```ini
+monitor=,preferred,auto,1
+```
 
 ## Customization
 
@@ -108,6 +136,7 @@ chmod +x ~/.config/waybar/scripts/*.sh
 - Arch Linux or Arch-based distro
 - Hyprland session
 - Bash shell
+- `pacman` repositories available
 
 ## License
 

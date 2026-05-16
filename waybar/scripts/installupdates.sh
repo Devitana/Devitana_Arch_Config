@@ -21,6 +21,7 @@ log_warning() { echo -e "${YELLOW}⚠${NC} $1"; }
 UPDATE_LOG="$HOME/.local/share/devitana/update.log"
 LOG_DIR="$(dirname "$UPDATE_LOG")"
 LOCK_FILE="/tmp/devitana-update.lock"
+LOCK_FD=201
 
 # ============================================================================
 # CLEANUP & EXIT HANDLERS
@@ -45,13 +46,13 @@ error_exit() {
 # PRELIMINARY CHECKS
 # ============================================================================
 
-# Check if already running
-if [[ -f "$LOCK_FILE" ]]; then
+# Check if already running (atomic)
+exec {LOCK_FD}>"$LOCK_FILE"
+if ! flock -n "$LOCK_FD"; then
     log_warning "Update already in progress. Exiting."
     read -p "Press Enter to close..."
     exit 0
 fi
-touch "$LOCK_FILE"
 
 # Create log directory
 mkdir -p "$LOG_DIR" 2>/dev/null || true
@@ -255,15 +256,8 @@ if command -v flatpak >/dev/null 2>&1; then
     fi
 fi
 
-# TEMP cleanup
-log_info "Clearing temporary files..."
-if rm -rf /tmp/* 2>/dev/null; then
-    log_success "temporary files cleared"
-    echo "$(date '+%Y-%m-%d %H:%M:%S'): /tmp cleared" >> "$UPDATE_LOG" 2>/dev/null
-else
-    log_warning "/tmp cleanup partially failed (some files may be in use, continuing...)"
-    echo "$(date '+%Y-%m-%d %H:%M:%S'): /tmp cleanup partial" >> "$UPDATE_LOG" 2>/dev/null
-fi
+log_info "Skipping global /tmp cleanup for safety"
+echo "$(date '+%Y-%m-%d %H:%M:%S'): skipped global /tmp cleanup" >> "$UPDATE_LOG" 2>/dev/null
 
 # ============================================================================
 # RELOAD WAYBAR & NOTIFY

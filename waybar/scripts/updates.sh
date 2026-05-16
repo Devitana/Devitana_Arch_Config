@@ -51,6 +51,9 @@ THRESHOLD_YELLOW=${THRESHOLD_YELLOW:-25}
 THRESHOLD_RED=${THRESHOLD_RED:-100}
 CSS_CLASS="updates-green"
 UPDATES=0
+UPDATES_PACMAN=0
+UPDATES_AUR=0
+UPDATES_FLATPAK=0
 
 # ============================================================================
 # CHECK FOR UPDATES
@@ -63,10 +66,6 @@ if _checkCommandExists pacman; then
         sleep 1
         ((WAIT_TIME++))
     done
-
-    UPDATES_PACMAN=0
-    UPDATES_AUR=0
-    UPDATES_FLATPAK=0
 
     # Pacman updates
     if command -v checkupdates >/dev/null 2>&1; then
@@ -93,9 +92,9 @@ if _checkCommandExists pacman; then
 
     UPDATES=$((UPDATES_AUR + UPDATES_PACMAN + UPDATES_FLATPAK))
 
-elif _checkCommandExists dnf; then
-    # Fedora/RHEL support
-    UPDATES=$(dnf check-update -q 2>/dev/null | grep -c '^[a-zA-Z0-9]' || echo 0)
+else
+    TOOLTIP="pacman not found"
+    TEXT=""
 fi
 
 # ============================================================================

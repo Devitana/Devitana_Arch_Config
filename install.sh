@@ -7,6 +7,8 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_DIR="$REPO_DIR/.config"
 BACKUP_DIR="$HOME/.config-backup-$(date +%s)"
 DRY_RUN=0
+GPU_PROFILE="generic_gpu.conf"
+VERIFY_ONLY=0
 
 ### ========= LOGGING ========= ###
 log() { echo -e "\e[1;32m[INFO]\e[0m $1"; }
@@ -19,6 +21,7 @@ Usage: $0 [--dry-run|-n]
 
 Options:
   -n, --dry-run   Show actions without making changes
+      --verify    Run post-install healthcheck only
   -h, --help      Show this help message
 EOF
 }
@@ -32,6 +35,9 @@ parse_args() {
             -h|--help)
                 usage
                 exit 0
+                ;;
+            --verify)
+                VERIFY_ONLY=1
                 ;;
             *)
                 err "Unknown option: $1"
@@ -56,36 +62,130 @@ require_user() {
     fi
 }
 
-### ========= GPU DETECTION ========= ###
-install_gpu_drivers() {
-    log "Detecting GPU..."
+verify_setup() {
+    log "Running healthcheck..."
 
-    GPU="$(lspci | grep -E "VGA|3D" || true)"
+    local missing=0
+    local cmds=(
+        Hyprland
+        waybar
+        kitty
+        hyprpaper
+        hypridle
+        hyprlock
+        jq
+        python
+        checkupdates
+    )
 
-    if [[ -z "$GPU" ]]; then
-        warn "No compatible GPU detected from lspci output; skipping drivers"
+    for cmd in "${cmds[@]}"; do
+        if ! command -v "$cmd" >/dev/null 2>&1; then
+            warn "Missing command: $cmd"
+            ((missing+=1))
+        fi
+    done
+
+    local required_files=(
+        "$HOME/.config/hypr/hyprland.conf"
+        "$HOME/.config/hypr/env_var/current_gpu.conf"
+        "$HOME/.config/waybar/config.jsonc"
+        "$HOME/.config/waybar/scripts/kb.sh"
+        "$HOME/.config/waybar/scripts/updates.sh"
+        "$HOME/.config/waybar/scripts/installupdates.sh"
+    )
+
+    for path in "${required_files[@]}"; do
+        if [[ ! -e "$path" ]]; then
+            warn "Missing file: $path"
+            ((missing+=1))
+        fi
+    done
+
+    if [[ -f "$HOME/.config/hypr/env_var/current_gpu.conf" ]] && ! grep -q '^source = ~/.config/hypr/env_var/gpu/' "$HOME/.config/hypr/env_var/current_gpu.conf"; then
+        warn "current_gpu.conf does not source a valid GPU profile"
+        ((missing+=1))
+    fi
+
+    if [[ "$missing" -eq 0 ]]; then
+        log "Healthcheck passed"
         return
     fi
 
-    if echo "$GPU" | grep -qi "AMD"; then
-        log "AMD GPU detected"
-        run_cmd sudo pacman -S --noconfirm \
-            mesa vulkan-radeon libva-mesa-driver \
-            vulkan-tools mesa-utils
+    err "Healthcheck found $missing issue(s)"
+}
 
-    elif echo "$GPU" | grep -qi "NVIDIA"; then
-        log "NVIDIA GPU detected"
-        run_cmd sudo pacman -S --noconfirm \
-            nvidia nvidia-utils nvidia-settings
+### ========= GPU DETECTION ========= ###
+detect_gpu_profile() {
+    local gpu
+    gpu="$(lspci | grep -E "VGA|3D" || true)"
 
-    elif echo "$GPU" | grep -qi "Intel"; then
-        log "Intel GPU detected"
-        run_cmd sudo pacman -S --noconfirm \
-            mesa vulkan-intel intel-media-driver
-
-    else
-        warn "Unknown GPU - skipping drivers"
+    if [[ -z "$gpu" ]]; then
+        warn "No compatible GPU detected from lspci output; using generic profile"
+        GPU_PROFILE="generic_gpu.conf"
+        return
     fi
+
+    if echo "$gpu" | grep -qi "AMD"; then
+        GPU_PROFILE="amd.conf"
+    elif echo "$gpu" | grep -qi "NVIDIA"; then
+        GPU_PROFILE="nvidia.conf"
+    elif echo "$gpu" | grep -qi "Intel"; then
+        GPU_PROFILE="intel.conf"
+    else
+        GPU_PROFILE="generic_gpu.conf"
+    fi
+
+    log "GPU profile selected: $GPU_PROFILE"
+}
+
+install_gpu_drivers() {
+    log "Detecting GPU..."
+    detect_gpu_profile
+
+    case "$GPU_PROFILE" in
+        amd.conf)
+            log "AMD GPU detected"
+            run_cmd sudo pacman -S --noconfirm \
+                mesa vulkan-radeon libva-mesa-driver \
+                vulkan-tools mesa-utils
+            ;;
+        nvidia.conf)
+            log "NVIDIA GPU detected"
+            run_cmd sudo pacman -S --noconfirm \
+                nvidia nvidia-utils nvidia-settings
+            ;;
+        intel.conf)
+            log "Intel GPU detected"
+            run_cmd sudo pacman -S --noconfirm \
+                mesa vulkan-intel intel-media-driver
+            ;;
+        *)
+            warn "Unknown GPU - skipping vendor-specific drivers"
+            ;;
+    esac
+}
+
+write_current_gpu_profile() {
+    local current_gpu_file="$HOME/.config/hypr/env_var/current_gpu.conf"
+    local target_profile="$GPU_PROFILE"
+
+    [[ -n "$target_profile" ]] || target_profile="generic_gpu.conf"
+
+    if [[ ! -f "$HOME/.config/hypr/env_var/gpu/$target_profile" ]]; then
+        warn "GPU profile file missing for $target_profile, falling back to generic_gpu.conf"
+        target_profile="generic_gpu.conf"
+    fi
+
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+        log "[dry-run] write source = ~/.config/hypr/env_var/gpu/$target_profile to $current_gpu_file"
+        return
+    fi
+
+    cat > "$current_gpu_file" <<EOF
+# Auto-generated by install.sh
+source = ~/.config/hypr/env_var/gpu/$target_profile
+EOF
+    log "Wrote GPU profile source to $current_gpu_file"
 }
 
 ### ========= CORE ========= ###
@@ -115,12 +215,22 @@ install_core() {
 
         xdg-desktop-portal-hyprland
         xdg-user-dirs
+        xdg-utils
 
         wl-clipboard
         grim
         slurp
+        hyprpaper
+        hypridle
+        hyprlock
         jq
+        curl
         playerctl
+        brightnessctl
+        pavucontrol
+        blueman
+        libnotify
+        pacman-contrib
         python
         python-requests
 
@@ -223,6 +333,22 @@ install_configs() {
         run_cmd cp "$src" "$target"
         log "Installed $file -> $target"
     done
+
+    SCRIPT_FILES=(
+        "$HOME/.config/hypr/scripts/detect_gpu.sh"
+        "$HOME/.config/waybar/scripts/kb.sh"
+        "$HOME/.config/waybar/scripts/updates.sh"
+        "$HOME/.config/waybar/scripts/installupdates.sh"
+    )
+
+    for script in "${SCRIPT_FILES[@]}"; do
+        if [[ -f "$script" ]]; then
+            run_cmd chmod +x "$script"
+            log "Made executable: $script"
+        fi
+    done
+
+    write_current_gpu_profile
 }
 
 ### ========= SERVICES ========= ###
@@ -287,6 +413,11 @@ EOF
 ### ========= MAIN ========= ###
 main() {
     parse_args "$@"
+
+    if [[ "$VERIFY_ONLY" -eq 1 ]]; then
+        verify_setup
+        exit 0
+    fi
 
     require_user
 
