@@ -52,9 +52,12 @@ local function write_conf(path, lines)
         return
     end
 
-    -- Ensure parent directory exists.
+    -- Ensure parent directory exists (quote path to handle spaces/metacharacters).
     local dir = path:match("^(.*)/[^/]+$")
-    if dir then os.execute("mkdir -p " .. dir) end
+    if dir then
+        local quoted = "'" .. dir:gsub("'", "'\\''") .. "'"
+        os.execute("mkdir -p " .. quoted)
+    end
 
     local fh = assert(io.open(path, "w"), "Cannot open " .. path)
     fh:write(content)
@@ -87,7 +90,7 @@ print("Generating Hyprland .conf files…")
 
 local files = {
     -- autostart
-    { p("autostart/programs.conf"), "config"      },
+    { p("autostart/programs.conf"), "programs"    },
     { p("autostart/startup.conf"),  "autostart"   },
 
     -- environment variables

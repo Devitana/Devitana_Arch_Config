@@ -45,7 +45,6 @@ end
 -- ─── serialization helpers ───────────────────────────────────────────────────
 
 local function val_str(v)
-    if type(v) == "boolean" then return tostring(v) end
     return tostring(v)
 end
 
