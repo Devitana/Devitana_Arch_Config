@@ -1,0 +1,122 @@
+-- windows.lua  –  look-and-feel: general, decoration, animations, layouts, misc
+-- Generates: hypr/monitors/windows.conf
+
+-- ─── general ─────────────────────────────────────────────────────────────────
+
+hl.config("general", {
+    { "gaps_in",      3 },
+    { "gaps_out",     6 },
+    { "border_size",  2 },
+    { "col.active_border",   "rgba(33ccffee) rgba(00ff99ee) 45deg" },
+    { "col.inactive_border", "rgba(595959aa)" },
+    { "resize_on_border", true },
+    { "allow_tearing",    true },
+    { "layout", "dwindle" },
+})
+
+-- ─── decoration ──────────────────────────────────────────────────────────────
+
+hl.raw("")
+hl.comment("Decorations")
+hl.raw("")
+hl.config("decoration", {
+    { "rounding",       6 },
+    { "rounding_power", 2 },
+    { "active_opacity",   1.0 },
+    { "inactive_opacity", 1.0 },
+    { "shadow", {
+        { "enabled",      false },
+        { "range",        4 },
+        { "render_power", 3 },
+        { "color", "rgba(1a1a1aee)" },
+    }},
+    { "blur", {
+        { "enabled",           true },
+        { "size",              10 },
+        { "passes",            4 },
+        { "new_optimizations", true },
+        { "vibrancy",          0.1696 },
+    }},
+})
+
+-- ─── animations ──────────────────────────────────────────────────────────────
+
+hl.raw("")
+hl.comment("Animations")
+hl.raw("")
+hl.config("animations", {
+    { "enabled", true },
+
+    -- Bezier curves  (name, x0, y0, x1, y1)
+    { "bezier", "easeOutQuint,   0.23, 1,    0.32, 1" },
+    { "bezier", "easeInOutCubic, 0.65, 0.05, 0.36, 1" },
+    { "bezier", "linear,         0,    0,    1,    1"  },
+    { "bezier", "almostLinear,   0.5,  0.5,  0.75, 1"  },
+    { "bezier", "quick,          0.15, 0,    0.1,  1"  },
+    { "bezier", "launcherCurve,  0.16, 1,    0.3,  1"  },
+
+    -- Window animations
+    { "animation", "global,        1,     10,    default"              },
+    { "animation", "windows,       1, 4.5, easeOutQuint"               },
+    { "animation", "windowsIn,     1, 10, easeOutQuint, gnomed"        },
+    { "animation", "windowsOut,    1, 2.5, easeOutQuint, popin 87%"    },
+
+    -- Fade animations
+    { "animation", "fadeIn,        1, 2.0, almostLinear"               },
+    { "animation", "fadeOut,       1, 1.8, almostLinear"               },
+    { "animation", "fade,          1, 3.0, quick"                      },
+
+    -- Layer animations (IMPORTANT for launcher)
+    { "animation", "layers,        1, 4.5, easeOutQuint"               },
+    { "animation", "layersIn,      1, 4.5, launcherCurve, popin 90%"   },
+    { "animation", "layersOut,     1, 2.8, launcherCurve, popin 90%"   },
+    { "animation", "fadeLayersIn,  1, 2.5, easeOutQuint"               },
+    { "animation", "fadeLayersOut, 1, 2.2, easeOutQuint"               },
+
+    -- Workspace animations
+    { "animation", "workspaces,    1, 2.0, almostLinear, fade"         },
+    { "animation", "workspacesIn,  1, 1.5, almostLinear, fade"         },
+    { "animation", "workspacesOut, 1, 2.0, almostLinear, fade"         },
+
+    -- Misc
+    { "animation", "border,        1, 5.0, easeOutQuint"               },
+    { "animation", "zoomFactor,    1, 7.0, quick"                      },
+})
+
+-- ─── smart-gaps stubs (commented out) ────────────────────────────────────────
+
+hl.raw("")
+hl.comment("Ref https://wiki.hypr.land/Configuring/Workspace-Rules/")
+hl.comment('"Smart gaps" / "No gaps when only"')
+hl.comment("uncomment all if you wish to use that.")
+hl.raw("# workspace = w[tv1], gapsout:0, gapsin:0")
+hl.raw("# workspace = f[1], gapsout:0, gapsin:0")
+hl.raw("# windowrule = bordersize 0, floating:0, onworkspace:w[tv1]")
+hl.raw("# windowrule = rounding 0, floating:0, onworkspace:w[tv1]")
+hl.raw("# windowrule = bordersize 0, floating:0, onworkspace:f[1]")
+hl.raw("# windowrule = rounding 0, floating:0, onworkspace:f[1]")
+
+-- ─── dwindle ─────────────────────────────────────────────────────────────────
+
+hl.raw("")
+hl.comment("See https://wiki.hypr.land/Configuring/Dwindle-Layout/ for more")
+hl.config("dwindle", {
+    { "preserve_split", true },
+})
+
+-- ─── master ──────────────────────────────────────────────────────────────────
+
+hl.raw("")
+hl.comment("See https://wiki.hypr.land/Configuring/Master-Layout/ for more")
+hl.config("master", {
+    { "new_status", "master" },
+})
+
+-- ─── misc ────────────────────────────────────────────────────────────────────
+
+hl.raw("")
+hl.comment("https://wiki.hypr.land/Configuring/Variables/#misc")
+hl.config("misc", {
+    { "force_default_wallpaper", -1 },
+    { "disable_hyprland_logo",   false },
+})

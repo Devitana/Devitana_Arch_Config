@@ -12,13 +12,22 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LUA_DIR="$SCRIPT_DIR/lua"
 
-if command -v lua &>/dev/null; then
-  echo "Using Lua generator..."
-  exec lua "$LUA_DIR/generate.lua" "$@"
+# Prefer generic 'lua', then versioned binaries (lua5.4, lua5.3, lua5.1, luajit).
+LUA_BIN=""
+for _candidate in lua lua5.4 lua5.3 lua5.1 luajit; do
+  if command -v "$_candidate" &>/dev/null; then
+    LUA_BIN="$_candidate"
+    break
+  fi
+done
+
+if [ -n "$LUA_BIN" ]; then
+  echo "Using Lua generator ($LUA_BIN)..."
+  exec "$LUA_BIN" "$LUA_DIR/generate.lua" "$@"
 elif command -v python3 &>/dev/null; then
   echo "Using Python generator (Lua not found)..."
   exec python3 "$LUA_DIR/generate.py" "$@"
 else
-  echo "Error: neither 'lua' nor 'python3' found in PATH." >&2
+  echo "Error: no Lua interpreter (lua/lua5.4/lua5.3/luajit) nor python3 found in PATH." >&2
   exit 1
 fi
