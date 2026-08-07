@@ -11,11 +11,80 @@ This is my first Linux project after moving from Windows. I built it over a few 
 
 ## Features
 
-- **Hyprland desktop** with modular split config files
+- **Hyprland desktop** with modular split config files authored in Lua and generated as `.conf`
 - **Waybar setup** with custom weather, update, keyboard, and power modules
 - **Installer script** with GPU detection, service setup, and auto-generated `current_gpu.conf`
 - **Dry-run mode** to preview installer actions safely
 - **Automatic backup** of replaced configs and dotfiles
+
+## Hyprland Config: Lua Source Files
+
+All Hyprland configuration is **authored in Lua** and **generated as `.conf` files**.  
+Do **not** hand-edit the `.conf` files directly – edit the Lua sources and regenerate.
+
+### Directory layout
+
+```
+hypr/
+├── generate.sh          ← convenience wrapper (auto-selects lua or python3)
+├── lua/
+│   ├── generate.lua     ← Lua generator (preferred on Arch where lua is installed)
+│   ├── generate.py      ← Python 3 fallback generator (portable / CI use)
+│   ├── hyprland.lua     ← top-level include list
+│   ├── programs.lua     ← $terminal, $fileManager, $menu
+│   ├── startup.lua      ← exec-once autostart commands
+│   ├── env.lua          ← core Wayland environment variables
+│   ├── gpu_amd.lua      ← AMD GPU env vars
+│   ├── gpu_intel.lua    ← Intel GPU env vars
+│   ├── gpu_nvidia.lua   ← NVIDIA GPU env vars
+│   ├── gpu_generic.lua  ← Generic GPU env vars
+│   ├── monitors.lua     ← monitor layout
+│   ├── waybar.lua       ← Waybar layer rules
+│   ├── windows.lua      ← general / decoration / animations / dwindle / misc
+│   ├── workspaces.lua   ← window rules and workspace rules
+│   ├── layout.lua       ← keyboard / mouse / touchpad / gestures
+│   ├── keybindings.lua  ← all keybinds
+│   ├── permissions.lua  ← Hyprland permission rules
+│   ├── hypridle.lua     ← screen-idle / DPMS config
+│   ├── hyprlock.lua     ← lock-screen appearance
+│   ├── hyprlauncher.lua ← launcher config
+│   └── hyprtoolkit.lua  ← toolkit theme
+└── **/*.conf            ← AUTO-GENERATED – do not hand-edit
+```
+
+### Regenerating configs
+
+```bash
+# From the repo root – prefers lua, falls back to python3:
+bash hypr/generate.sh
+
+# Or directly with Lua (Arch: pacman -S lua):
+cd hypr/lua && lua generate.lua
+
+# Or directly with Python 3 (any system):
+cd hypr/lua && python3 generate.py
+```
+
+### Checking for drift
+
+```bash
+# Exits 0 if .conf files match sources, 1 if any are stale:
+bash hypr/generate.sh --check
+```
+
+### Making changes
+
+1. Edit the relevant `hypr/lua/*.lua` file.
+2. Run `bash hypr/generate.sh` to rebuild the `.conf` files.
+3. Reload Hyprland (`hyprctl reload`) or re-login to apply.
+
+### Migration notes (existing users)
+
+If you cloned this repo before the Lua migration:
+- The `.conf` files still live in the same locations and are loaded by Hyprland unchanged.
+- Hyprland never sees the Lua files; they are only used for code generation.
+- To customise your config, edit `hypr/lua/*.lua` instead of the `.conf` files.
+- Run `bash hypr/generate.sh` whenever you change a Lua source to update the `.conf` output.
 
 ## Quick Start
 
@@ -59,10 +128,10 @@ This checks core commands, required config files, and whether `current_gpu.conf`
 
 This repo is my personal daily setup first, but it is structured so others can use it too.
 
-Before first login on another machine, update these files:
+Before first login on another machine, update these **Lua source files** (then run `bash hypr/generate.sh`):
 
-- `hypr/monitors/monitors.conf` (connector names, resolution, refresh rate, scale)
-- `hypr/keyboard/layout.conf` (`kb_layout`, variants/options)
+- `hypr/lua/monitors.lua` (connector names, resolution, refresh rate, scale)
+- `hypr/lua/layout.lua` (`kb_layout`, variants/options)
 - `waybar/config.jsonc` launcher app choices (browser/file manager)
 - Optional weather env vars: `LAT`, `LON`, `WEATHER_CACHE_TIME`
 
