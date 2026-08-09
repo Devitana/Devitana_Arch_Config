@@ -1,6 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # GPU Detection Script for Hyprland
 # Automatically sources the appropriate GPU configuration
+
+set -euo pipefail
 
 # Color codes for output
 # shellcheck disable=SC2034
@@ -12,56 +14,86 @@ NC='\033[0m' # No Color
 GPU_CONFIG_DIR="$HOME/.config/hypr/env_var/gpu"
 CONFIG_FILE=""
 
-detect_gpu() {
-    if command -v lspci &> /dev/null; then
-        # Check for NVIDIA GPU
-        if lspci | grep -i nvidia > /dev/null 2>&1; then
-            CONFIG_FILE="$GPU_CONFIG_DIR/nvidia.conf"
-            echo -e "${GREEN}[GPU] NVIDIA GPU detected${NC}" >&2
-            return 0
-        fi
-        
-        # Check for AMD GPU
-        if lspci | grep -i "amd\|radeon" > /dev/null 2>&1; then
-            CONFIG_FILE="$GPU_CONFIG_DIR/amd.conf"
-            echo -e "${GREEN}[GPU] AMD GPU detected${NC}" >&2
-            return 0
-        fi
-        
-        # Check for Intel GPU
-        if lspci | grep -i "intel.*graphics" > /dev/null 2>&1; then
-            CONFIG_FILE="$GPU_CONFIG_DIR/intel.conf"
-            echo -e "${GREEN}[GPU] Intel GPU detected${NC}" >&2
-            return 0
-        fi
-    else
-        echo -e "${YELLOW}[GPU] lspci not found, checking /proc/modules${NC}" >&2
-        
-        # Fallback: check loaded kernel modules
-        if grep -q nvidia /proc/modules 2>/dev/null; then
-            CONFIG_FILE="$GPU_CONFIG_DIR/nvidia.conf"
-            echo -e "${GREEN}[GPU] NVIDIA GPU detected (module-based)${NC}" >&2
-            return 0
-        fi
-        
-        if grep -q amdgpu /proc/modules 2>/dev/null; then
-            CONFIG_FILE="$GPU_CONFIG_DIR/amd.conf"
-            echo -e "${GREEN}[GPU] AMD GPU detected (module-based)${NC}" >&2
-            return 0
-        fi
+has_cmd() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+detect_from_lspci() {
+    local gpus
+    gpus="$(lspci -nnk | grep -Ei 'vga compatible controller|3d controller|display controller' || true)"
+
+    # Prefer discrete NVIDIA first when present
+    if grep -Eiq 'nvidia' <<< "$gpus"; then
+        CONFIG_FILE="$GPU_CONFIG_DIR/nvidia.conf"
+        echo -e "${GREEN}[GPU] NVIDIA GPU detected${NC}" >&2
+        return 0
     fi
-    
-    # Default fallback
+
+    # Then AMD
+    if grep -Eiq 'amd|advanced micro devices|radeon' <<< "$gpus"; then
+        CONFIG_FILE="$GPU_CONFIG_DIR/amd.conf"
+        echo -e "${GREEN}[GPU] AMD GPU detected${NC}" >&2
+        return 0
+    fi
+
+    # Then Intel
+    if grep -Eiq 'intel' <<< "$gpus"; then
+        CONFIG_FILE="$GPU_CONFIG_DIR/intel.conf"
+        echo -e "${GREEN}[GPU] Intel GPU detected${NC}" >&2
+        return 0
+    fi
+
+    return 1
+}
+
+detect_from_modules() {
+    # Fallback: check loaded kernel modules
+    if grep -Eq '^nvidia ' /proc/modules 2>/dev/null; then
+        CONFIG_FILE="$GPU_CONFIG_DIR/nvidia.conf"
+        echo -e "${GREEN}[GPU] NVIDIA GPU detected (module-based)${NC}" >&2
+        return 0
+    fi
+
+    if grep -Eq '^amdgpu |^radeon ' /proc/modules 2>/dev/null; then
+        CONFIG_FILE="$GPU_CONFIG_DIR/amd.conf"
+        echo -e "${GREEN}[GPU] AMD GPU detected (module-based)${NC}" >&2
+        return 0
+    fi
+
+    if grep -Eq '^i915 |^xe ' /proc/modules 2>/dev/null; then
+        CONFIG_FILE="$GPU_CONFIG_DIR/intel.conf"
+        echo -e "${GREEN}[GPU] Intel GPU detected (module-based)${NC}" >&2
+        return 0
+    fi
+
+    return 1
+}
+
+detect_gpu() {
+    if has_cmd lspci && detect_from_lspci; then
+        return 0
+    fi
+
+    if ! has_cmd lspci; then
+        echo -e "${YELLOW}[GPU] lspci not found, checking /proc/modules${NC}" >&2
+    else
+        echo -e "${YELLOW}[GPU] Could not map lspci GPU entries, checking /proc/modules${NC}" >&2
+    fi
+
+    if detect_from_modules; then
+        return 0
+    fi
+
     CONFIG_FILE="$GPU_CONFIG_DIR/generic_gpu.conf"
     echo -e "${YELLOW}[GPU] Using generic/fallback configuration${NC}" >&2
     return 1
 }
 
 # Run detection
-detect_gpu
+detect_gpu || true
 
 # Output the source command
-if [ -f "$CONFIG_FILE" ]; then
+if [[ -f "$CONFIG_FILE" ]]; then
     echo "source = $CONFIG_FILE"
 else
     echo "# Warning: GPU config file not found at $CONFIG_FILE" >&2
