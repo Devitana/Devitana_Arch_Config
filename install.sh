@@ -87,7 +87,7 @@ verify_setup() {
 
     local required_files=(
         "$HOME/.config/hypr/hyprland.conf"
-        "$HOME/.config/hypr/env_var/current_gpu.conf"
+        "$HOME/.config/hypr/env_var/current_gpu.lua"
         "$HOME/.config/waybar/config.jsonc"
         "$HOME/.config/waybar/scripts/kb.sh"
         "$HOME/.config/waybar/scripts/updates.sh"
@@ -101,8 +101,8 @@ verify_setup() {
         fi
     done
 
-    if [[ -f "$HOME/.config/hypr/env_var/current_gpu.conf" ]] && ! grep -q '^source = ~/.config/hypr/env_var/gpu/' "$HOME/.config/hypr/env_var/current_gpu.conf"; then
-        warn "current_gpu.conf does not source a valid GPU profile"
+    if [[ -f "$HOME/.config/hypr/env_var/current_gpu.lua" ]] && ! grep -q '^source = ~/.config/hypr/env_var/gpu/' "$HOME/.config/hypr/env_var/current_gpu.lua"; then
+        warn "current_gpu.lua does not source a valid GPU profile"
         ((missing+=1))
     fi
 
@@ -116,7 +116,7 @@ verify_setup() {
 
 ensure_gpu_config() {
     local detect_script="$HOME/.config/hypr/scripts/detect_gpu.sh"
-    local target_file="$HOME/.config/hypr/env_var/current_gpu.conf"
+    local target_file="$HOME/.config/hypr/env_var/current_gpu.lua"
     local fallback="source = ~/.config/hypr/env_var/gpu/generic_gpu.conf"
 
     if [[ -f "$detect_script" ]]; then
