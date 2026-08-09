@@ -1,18 +1,13 @@
--- Auto-generated from generic_gpu.conf; keeps the original config text.
-return [[
-#################################
-### GENERIC WAYLAND SETTINGS   ###
-#################################
+-- env_var/gpu/generic_gpu.lua
 
-# Generic Vulkan configuration
-env = WLR_RENDERER,vulkan
-env = WLR_NO_HARDWARE_CURSORS,1
+----------------------------------
+--- GENERIC WAYLAND SETTINGS    ---
+----------------------------------
 
-# Generic VRR settings
-env = __GL_GSYNC_ALLOWED,1
-env = __GL_VRR_ALLOWED,1
+hl.env("WLR_RENDERER", "vulkan")
+hl.env("WLR_NO_HARDWARE_CURSORS", "1")
 
-# Default present mode
-env = MESA_VK_WSI_PRESENT_MODE,mailbox
-]]
+hl.env("MESA_VK_WSI_PRESENT_MODE", "mailbox")
+hl.env("__GL_GSYNC_ALLOWED", "1")
+hl.env("__GL_VRR_ALLOWED", "1")
 
