@@ -101,8 +101,8 @@ verify_setup() {
         fi
     done
 
-    if [[ -f "$HOME/.config/hypr/env_var/current_gpu.lua" ]] && ! grep -q '^source = ~/.config/hypr/env_var/gpu/' "$HOME/.config/hypr/env_var/current_gpu.lua"; then
-        warn "current_gpu.lua does not source a valid GPU profile"
+    if [[ -f "$HOME/.config/hypr/env_var/current_gpu.lua" ]] && ! grep -q 'hl\.env' "$HOME/.config/hypr/env_var/current_gpu.lua"; then
+        warn "current_gpu.lua does not contain any hl.env settings"
         ((missing+=1))
     fi
 
@@ -117,26 +117,32 @@ verify_setup() {
 ensure_gpu_config() {
     local detect_script="$HOME/.config/hypr/scripts/detect_gpu.sh"
     local target_file="$HOME/.config/hypr/env_var/current_gpu.lua"
-    local fallback="source = ~/.config/hypr/env_var/gpu/generic_gpu.conf"
+    local fallback_src="$REPO_DIR/hypr/env_var/gpu/generic_gpu.lua"
+
+    if [[ ! -f "$fallback_src" ]]; then
+        err "Fallback GPU profile not found at $fallback_src"
+    fi
 
     if [[ -f "$detect_script" ]]; then
         run_cmd chmod +x "$detect_script"
         if [[ "$DRY_RUN" -eq 1 ]]; then
-            log "[dry-run] would run GPU detection and write $target_file"
+            log "[dry-run] would run GPU detection and copy matching .lua profile to $target_file"
         else
-            if "$detect_script" > "$target_file" 2>/tmp/hypr-gpu-detect.log; then
-                log "GPU config detected and written to $target_file"
+            local gpu_lua
+            if gpu_lua="$("$detect_script" 2>/tmp/hypr-gpu-detect.log)" && [[ -f "$gpu_lua" ]]; then
+                cp "$gpu_lua" "$target_file"
+                log "GPU config detected and copied to $target_file"
             else
-                warn "GPU detection returned non-zero, using fallback generic profile"
-                echo "$fallback" > "$target_file"
+                warn "GPU detection returned no valid file, using fallback generic profile"
+                cp "$fallback_src" "$target_file"
             fi
         fi
     else
         warn "GPU detection script missing at $detect_script; writing fallback generic profile"
         if [[ "$DRY_RUN" -eq 1 ]]; then
-            log "[dry-run] would write fallback GPU profile to $target_file"
+            log "[dry-run] would copy fallback GPU profile to $target_file"
         else
-            echo "$fallback" > "$target_file"
+            cp "$fallback_src" "$target_file"
         fi
     fi
 }
