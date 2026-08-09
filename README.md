@@ -26,43 +26,39 @@ Do **not** hand-edit the `.conf` files directly – edit the Lua sources and reg
 
 ```
 hypr/
-├── generate.sh          ← convenience wrapper (auto-selects lua or python3)
-├── lua/
-│   ├── generate.lua     ← Lua generator (preferred on Arch where lua is installed)
-│   ├── generate.py      ← Python 3 fallback generator (portable / CI use)
-│   ├── hyprland.lua     ← top-level include list
-│   ├── programs.lua     ← $terminal, $fileManager, $menu
-│   ├── startup.lua      ← exec-once autostart commands
-│   ├── env.lua          ← core Wayland environment variables
-│   ├── gpu_amd.lua      ← AMD GPU env vars
-│   ├── gpu_intel.lua    ← Intel GPU env vars
-│   ├── gpu_nvidia.lua   ← NVIDIA GPU env vars
-│   ├── gpu_generic.lua  ← Generic GPU env vars
-│   ├── monitors.lua     ← monitor layout
-│   ├── waybar.lua       ← Waybar layer rules
-│   ├── windows.lua      ← general / decoration / animations / dwindle / misc
-│   ├── workspaces.lua   ← window rules and workspace rules
-│   ├── layout.lua       ← keyboard / mouse / touchpad / gestures
-│   ├── keybindings.lua  ← all keybinds
-│   ├── permissions.lua  ← Hyprland permission rules
-│   ├── hypridle.lua     ← screen-idle / DPMS config
-│   ├── hyprlock.lua     ← lock-screen appearance
-│   ├── hyprlauncher.lua ← launcher config
-│   └── hyprtoolkit.lua  ← toolkit theme
-└── **/*.conf            ← AUTO-GENERATED – do not hand-edit
+├── generate.sh              ← regenerates .conf files from Lua sources
+├── hyprland.lua             ← top-level include list
+├── autostart/
+│   ├── programs.lua         ← $terminal, $fileManager, $menu
+│   └── startup.lua          ← exec-once autostart commands
+├── env_var/
+│   ├── current_gpu.lua      ← AUTO-WRITTEN by installer (GPU-specific env vars)
+│   ├── env.lua              ← core Wayland environment variables
+│   └── gpu/
+│       ├── amd.lua          ← AMD GPU env vars
+│       ├── nvidia.lua       ← NVIDIA GPU env vars
+│       ├── intel.lua        ← Intel GPU env vars
+│       └── generic_gpu.lua  ← fallback GPU env vars
+├── keyboard/
+│   ├── keybindings.lua      ← all keybinds
+│   └── layout.lua           ← keyboard / mouse / touchpad / gestures
+├── monitors/
+│   ├── monitors.lua         ← monitor layout
+│   ├── waybar.lua           ← Waybar layer rules
+│   ├── windows.lua          ← general / decoration / animations / dwindle / misc
+│   └── workspaces.lua       ← window rules and workspace rules
+├── permissions/
+│   └── permissions.lua      ← Hyprland permission rules
+├── scripts/
+│   └── detect_gpu.sh        ← GPU detection helper (called by installer)
+└── **/*.conf                ← AUTO-GENERATED – do not hand-edit
 ```
 
 ### Regenerating configs
 
 ```bash
-# From the repo root – prefers lua, falls back to python3:
+# From the repo root:
 bash hypr/generate.sh
-
-# Or directly with Lua (Arch: pacman -S lua):
-cd hypr/lua && lua generate.lua
-
-# Or directly with Python 3 (any system):
-cd hypr/lua && python3 generate.py
 ```
 
 ### Checking for drift
@@ -74,7 +70,7 @@ bash hypr/generate.sh --check
 
 ### Making changes
 
-1. Edit the relevant `hypr/lua/*.lua` file.
+1. Edit the relevant Lua file under `hypr/` (e.g. `hypr/keyboard/keybindings.lua`).
 2. Run `bash hypr/generate.sh` to rebuild the `.conf` files.
 3. Reload Hyprland (`hyprctl reload`) or re-login to apply.
 
@@ -83,7 +79,7 @@ bash hypr/generate.sh --check
 If you cloned this repo before the Lua migration:
 - The `.conf` files still live in the same locations and are loaded by Hyprland unchanged.
 - Hyprland never sees the Lua files; they are only used for code generation.
-- To customise your config, edit `hypr/lua/*.lua` instead of the `.conf` files.
+- To customise your config, edit the Lua source files under `hypr/` instead of the `.conf` files.
 - Run `bash hypr/generate.sh` whenever you change a Lua source to update the `.conf` output.
 
 ## Quick Start
@@ -112,13 +108,13 @@ bash install.sh --dry-run
 bash install.sh --verify
 ```
 
-This checks core commands, required config files, and whether `current_gpu.conf` is pointing to a GPU profile.
+This checks core commands, required config files, and whether `current_gpu.lua` contains valid GPU env settings.
 
 ### What gets installed/copied
 
 - Installs core packages (`hyprland`, `waybar`, `kitty`, `jq`, `playerctl`, `python`, `python-requests`, PipeWire stack, etc.)
 - Detects GPU and installs matching drivers (AMD/NVIDIA/Intel)
-- Writes `~/.config/hypr/env_var/current_gpu.conf` to source the detected GPU profile
+- Writes `~/.config/hypr/env_var/current_gpu.lua` with the detected GPU profile
 - Copies configs to `~/.config/hypr`, `~/.config/kitty`, and `~/.config/waybar`
 - Copies repo `.bashrc` to `~/.bashrc`
 - Backs up replaced files to `~/.config-backup-<timestamp>/`
@@ -130,8 +126,8 @@ This repo is my personal daily setup first, but it is structured so others can u
 
 Before first login on another machine, update these **Lua source files** (then run `bash hypr/generate.sh`):
 
-- `hypr/lua/monitors.lua` (connector names, resolution, refresh rate, scale)
-- `hypr/lua/layout.lua` (`kb_layout`, variants/options)
+- `hypr/monitors/monitors.lua` (connector names, resolution, refresh rate, scale)
+- `hypr/keyboard/layout.lua` (`kb_layout`, variants/options)
 - `waybar/config.jsonc` launcher app choices (browser/file manager)
 - Optional weather env vars: `LAT`, `LON`, `WEATHER_CACHE_TIME`
 
