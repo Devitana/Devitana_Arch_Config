@@ -119,6 +119,10 @@ ensure_gpu_config() {
     local target_file="$HOME/.config/hypr/env_var/current_gpu.lua"
     local fallback_src="$REPO_DIR/hypr/env_var/gpu/generic_gpu.lua"
 
+    if [[ ! -f "$fallback_src" ]]; then
+        err "Fallback GPU profile not found at $fallback_src"
+    fi
+
     if [[ -f "$detect_script" ]]; then
         run_cmd chmod +x "$detect_script"
         if [[ "$DRY_RUN" -eq 1 ]]; then

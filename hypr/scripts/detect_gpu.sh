@@ -97,5 +97,10 @@ if [[ -f "$CONFIG_FILE" ]]; then
     echo "$CONFIG_FILE"
 else
     echo "# Warning: GPU config file not found at $CONFIG_FILE" >&2
-    echo "$GPU_CONFIG_DIR/generic_gpu.lua"
+    fallback="$GPU_CONFIG_DIR/generic_gpu.lua"
+    if [[ ! -f "$fallback" ]]; then
+        echo "# Error: fallback GPU config also not found at $fallback" >&2
+        exit 1
+    fi
+    echo "$fallback"
 fi
