@@ -51,36 +51,10 @@ hypr/
 │   └── permissions.lua      ← Hyprland permission rules
 ├── scripts/
 │   └── detect_gpu.sh        ← GPU detection helper (called by installer)
-└── **/*.conf                ← AUTO-GENERATED – do not hand-edit
-```
-
-### Regenerating configs
-
+└── **/*.conf                ← 
 ```bash
-# From the repo root:
-bash hypr/generate.sh
-```
 
-### Checking for drift
 
-```bash
-# Exits 0 if .conf files match sources, 1 if any are stale:
-bash hypr/generate.sh --check
-```
-
-### Making changes
-
-1. Edit the relevant Lua file under `hypr/` (e.g. `hypr/keyboard/keybindings.lua`).
-2. Run `bash hypr/generate.sh` to rebuild the `.conf` files.
-3. Reload Hyprland (`hyprctl reload`) or re-login to apply.
-
-### Migration notes (existing users)
-
-If you cloned this repo before the Lua migration:
-- The `.conf` files still live in the same locations and are loaded by Hyprland unchanged.
-- Hyprland never sees the Lua files; they are only used for code generation.
-- To customise your config, edit the Lua source files under `hypr/` instead of the `.conf` files.
-- Run `bash hypr/generate.sh` whenever you change a Lua source to update the `.conf` output.
 
 ## Quick Start
 
@@ -131,11 +105,6 @@ Before first login on another machine, update these **Lua source files** (then r
 - `waybar/config.jsonc` launcher app choices (browser/file manager)
 - Optional weather env vars: `LAT`, `LON`, `WEATHER_CACHE_TIME`
 
-If your monitor outputs are unknown, start with a single safe line in `monitors.conf`:
-
-```ini
-monitor=,preferred,auto,1
-```
 
 ## Customization
 
