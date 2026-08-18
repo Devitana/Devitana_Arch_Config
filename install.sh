@@ -4,7 +4,7 @@ set -euo pipefail
 
 ### ========= CONFIG ========= ###
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_DIR="$REPO_DIR/.config"
+CONFIG_HOME="$HOME/.config"
 BACKUP_DIR="$HOME/.config-backup-$(date +%s)"
 DRY_RUN=0
 GPU_PROFILE="generic_gpu.conf"
@@ -63,9 +63,11 @@ require_user() {
 }
 
 verify_setup() {
+    local strict="${1:-1}"
     log "Running healthcheck..."
 
     local missing=0
+    local missing_cmds=0
     local cmds=(
         Hyprland
         waybar
@@ -81,17 +83,16 @@ verify_setup() {
     for cmd in "${cmds[@]}"; do
         if ! command -v "$cmd" >/dev/null 2>&1; then
             warn "Missing command: $cmd"
-            ((missing+=1))
+            ((missing_cmds+=1))
         fi
     done
 
     local required_files=(
-        "$HOME/.config/hypr/hyprland.conf"
-        "$HOME/.config/hypr/env_var/current_gpu.lua"
-        "$HOME/.config/waybar/config.jsonc"
-        "$HOME/.config/waybar/scripts/kb.sh"
-        "$HOME/.config/waybar/scripts/updates.sh"
-        "$HOME/.config/waybar/scripts/installupdates.sh"
+        "$CONFIG_HOME/hypr/env_var/current_gpu.lua"
+        "$CONFIG_HOME/waybar/config.jsonc"
+        "$CONFIG_HOME/waybar/scripts/kb.sh"
+        "$CONFIG_HOME/waybar/scripts/updates.sh"
+        "$CONFIG_HOME/waybar/scripts/installupdates.sh"
     )
 
     for path in "${required_files[@]}"; do
@@ -101,23 +102,81 @@ verify_setup() {
         fi
     done
 
-    if [[ -f "$HOME/.config/hypr/env_var/current_gpu.lua" ]] && ! grep -q 'hl\.env' "$HOME/.config/hypr/env_var/current_gpu.lua"; then
+    if [[ ! -e "$CONFIG_HOME/hypr/hyprland.conf" && ! -e "$CONFIG_HOME/hypr/hyprland.lua" ]]; then
+        warn "Missing file: $CONFIG_HOME/hypr/hyprland.conf (or hyprland.lua)"
+        ((missing+=1))
+    fi
+
+    if [[ -f "$CONFIG_HOME/hypr/env_var/current_gpu.lua" ]] && ! grep -q 'hl\.env' "$CONFIG_HOME/hypr/env_var/current_gpu.lua"; then
         warn "current_gpu.lua does not contain any hl.env settings"
         ((missing+=1))
     fi
 
-    if [[ "$missing" -eq 0 ]]; then
+    local total_missing="$missing"
+    if [[ "$strict" -eq 1 ]]; then
+        total_missing=$((missing + missing_cmds))
+    fi
+
+    if [[ "$total_missing" -eq 0 ]]; then
         log "Healthcheck passed"
         return
     fi
 
-    err "Healthcheck found $missing issue(s)"
+    if [[ "$strict" -eq 1 ]]; then
+        err "Healthcheck found $total_missing issue(s)"
+    else
+        warn "Healthcheck found $missing file issue(s) and $missing_cmds command warning(s) (non-fatal)"
+    fi
+}
+
+install_configs() {
+    local components=(hypr waybar kitty)
+
+    run_cmd mkdir -p "$CONFIG_HOME"
+
+    for component in "${components[@]}"; do
+        local src="$REPO_DIR/$component"
+        local dst="$CONFIG_HOME/$component"
+
+        if [[ ! -d "$src" ]]; then
+            warn "Missing component directory in repo: $src"
+            continue
+        fi
+
+        run_cmd mkdir -p "$dst"
+        run_cmd cp -a "$src/." "$dst/"
+    done
+
+    local waybar_scripts="$CONFIG_HOME/waybar/scripts"
+    local hypr_scripts="$CONFIG_HOME/hypr/scripts"
+    if [[ -d "$waybar_scripts" ]]; then
+        local waybar_script_files=()
+        shopt -s nullglob
+        waybar_script_files=("$waybar_scripts"/*.sh)
+        shopt -u nullglob
+        if [[ "${#waybar_script_files[@]}" -gt 0 ]]; then
+            run_cmd chmod +x "${waybar_script_files[@]}"
+        fi
+    fi
+    if [[ -d "$hypr_scripts" ]]; then
+        local hypr_script_files=()
+        shopt -s nullglob
+        hypr_script_files=("$hypr_scripts"/*.sh)
+        shopt -u nullglob
+        if [[ "${#hypr_script_files[@]}" -gt 0 ]]; then
+            run_cmd chmod +x "${hypr_script_files[@]}"
+        fi
+    fi
 }
 
 ensure_gpu_config() {
-    local detect_script="$HOME/.config/hypr/scripts/detect_gpu.sh"
-    local target_file="$HOME/.config/hypr/env_var/current_gpu.lua"
+    local detect_script="$CONFIG_HOME/hypr/scripts/detect_gpu.sh"
+    local target_file="$CONFIG_HOME/hypr/env_var/current_gpu.lua"
     local fallback_src="$REPO_DIR/hypr/env_var/gpu/generic_gpu.lua"
+
+    if [[ ! -f "$detect_script" ]]; then
+        detect_script="$REPO_DIR/hypr/scripts/detect_gpu.sh"
+    fi
 
     if [[ ! -f "$fallback_src" ]]; then
         err "Fallback GPU profile not found at $fallback_src"
@@ -152,12 +211,20 @@ main() {
     require_user
 
     if [[ "$VERIFY_ONLY" -eq 1 ]]; then
-        verify_setup
+        verify_setup 1
         exit 0
     fi
 
+    install_configs
     ensure_gpu_config
-    verify_setup
+
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+        verify_setup 0
+        log "Dry-run complete"
+        exit 0
+    fi
+
+    verify_setup 0
     log "Install checks complete"
 }
 
