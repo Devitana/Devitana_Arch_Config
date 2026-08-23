@@ -115,7 +115,6 @@ PKGS_TOOLS=(
     wl-clipboard
     cliphist
     swappy
-    xdg-open
 )
 
 # Fonts (icon/nerd fonts used by Waybar and terminal)
@@ -130,7 +129,6 @@ PKGS_FONTS=(
 # AUR packages (installed via AUR helper)
 AUR_PKGS=(
     hyprlauncher
-    waybar-hyprland-git
 )
 
 # ---- Helpers ----
@@ -191,6 +189,7 @@ ensure_aur_helper() {
     fi
     local build_dir
     build_dir="$(mktemp -d)"
+    sudo pacman -S --needed --noconfirm base-devel git
     git clone --depth=1 https://aur.archlinux.org/paru.git "$build_dir/paru"
     (cd "$build_dir/paru" && makepkg -si --noconfirm)
     rm -rf "$build_dir"

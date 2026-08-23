@@ -86,7 +86,6 @@ Checks core commands, required config files, and whether `current_gpu.lua` conta
 ### AUR packages (via paru/yay)
 
 - `hyprlauncher` – application launcher bound to `Super+R`
-- `waybar-hyprland-git` – Waybar build with Hyprland workspace support
 
 ### GPU drivers
 
