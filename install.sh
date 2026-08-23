@@ -55,6 +55,206 @@ run_cmd() {
     fi
 }
 
+### ========= PACKAGE INSTALLATION ========= ###
+
+# ---- Package arrays grouped by category ----
+
+# Core Hyprland ecosystem (official repos)
+PKGS_HYPR=(
+    hyprland
+    hyprpaper
+    hypridle
+    hyprlock
+    hyprcursor
+    xdg-desktop-portal-hyprland
+    xdg-utils
+    qt5-wayland
+    qt6-wayland
+    polkit-kde-agent
+    libseat
+    seatd
+)
+
+# Waybar and its runtime dependencies
+PKGS_WAYBAR=(
+    waybar
+    libpulse
+    pipewire
+    pipewire-pulse
+    pipewire-alsa
+    wireplumber
+    pavucontrol
+    playerctl
+    jq
+    curl
+    python
+    python-requests
+    libnotify
+)
+
+# Utilities referenced by configs / keybindings
+PKGS_UTILS=(
+    kitty
+    firefox
+    nautilus
+    blueman
+    networkmanager
+    nm-connection-editor
+    network-manager-applet
+    flatpak
+    flock
+    pacman-contrib
+    figlet
+    missioncenter
+)
+
+# Screenshot / clipboard / media tools
+PKGS_TOOLS=(
+    grim
+    slurp
+    wl-clipboard
+    cliphist
+    swappy
+    xdg-open
+)
+
+# Fonts (icon/nerd fonts used by Waybar and terminal)
+PKGS_FONTS=(
+    ttf-font-awesome
+    ttf-nerd-fonts-symbols
+    ttf-nerd-fonts-symbols-common
+    noto-fonts
+    noto-fonts-emoji
+)
+
+# AUR packages (installed via AUR helper)
+AUR_PKGS=(
+    hyprlauncher
+    waybar-hyprland-git
+)
+
+# ---- Helpers ----
+
+pacman_install() {
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+        log "[dry-run] would install: $*"
+        return
+    fi
+    # Install only packages not already installed
+    local to_install=()
+    for pkg in "$@"; do
+        if ! pacman -Qq "$pkg" &>/dev/null; then
+            to_install+=("$pkg")
+        fi
+    done
+    if [[ "${#to_install[@]}" -eq 0 ]]; then
+        log "All packages in this group already installed, skipping"
+        return
+    fi
+    log "Installing: ${to_install[*]}"
+    sudo pacman -S --needed --noconfirm "${to_install[@]}"
+}
+
+aur_install() {
+    local aur_helper=""
+    if command -v paru &>/dev/null; then
+        aur_helper="paru"
+    elif command -v yay &>/dev/null; then
+        aur_helper="yay"
+    else
+        warn "No AUR helper (paru/yay) found – skipping AUR packages: $*"
+        return
+    fi
+
+    local to_install=()
+    for pkg in "$@"; do
+        if ! pacman -Qq "$pkg" &>/dev/null; then
+            to_install+=("$pkg")
+        fi
+    done
+    if [[ "${#to_install[@]}" -eq 0 ]]; then
+        log "All AUR packages in this group already installed, skipping"
+        return
+    fi
+    log "Installing AUR packages via $aur_helper: ${to_install[*]}"
+    run_cmd "$aur_helper" -S --needed --noconfirm "${to_install[@]}"
+}
+
+ensure_aur_helper() {
+    if command -v paru &>/dev/null || command -v yay &>/dev/null; then
+        return
+    fi
+    warn "No AUR helper found. Attempting to install paru from AUR..."
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+        log "[dry-run] would clone and build paru from AUR"
+        return
+    fi
+    local build_dir
+    build_dir="$(mktemp -d)"
+    git clone --depth=1 https://aur.archlinux.org/paru.git "$build_dir/paru"
+    (cd "$build_dir/paru" && makepkg -si --noconfirm)
+    rm -rf "$build_dir"
+}
+
+install_gpu_drivers() {
+    log "Detecting GPU for driver installation..."
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+        log "[dry-run] would detect GPU and install matching drivers"
+        return
+    fi
+    local gpu_info
+    gpu_info="$(lspci 2>/dev/null | grep -iE 'VGA|3D|Display' || true)"
+
+    if echo "$gpu_info" | grep -qi nvidia; then
+        log "NVIDIA GPU detected – installing nvidia packages"
+        sudo pacman -S --needed --noconfirm nvidia nvidia-utils nvidia-settings || \
+            warn "NVIDIA package install had issues (may need manual review)"
+    elif echo "$gpu_info" | grep -qi amd; then
+        log "AMD GPU detected – installing mesa/radeon packages"
+        sudo pacman -S --needed --noconfirm mesa lib32-mesa vulkan-radeon libva-mesa-driver || \
+            warn "AMD package install had issues"
+    elif echo "$gpu_info" | grep -qi intel; then
+        log "Intel GPU detected – installing mesa/intel packages"
+        sudo pacman -S --needed --noconfirm mesa lib32-mesa vulkan-intel intel-media-driver || \
+            warn "Intel package install had issues"
+    else
+        warn "Could not identify GPU from lspci; skipping driver install"
+    fi
+}
+
+install_packages() {
+    if [[ "$DRY_RUN" -eq 0 ]] && ! command -v pacman &>/dev/null; then
+        err "pacman not found – this script requires Arch Linux or an Arch-based distro"
+    fi
+
+    log "=== Installing Hyprland ecosystem ==="
+    pacman_install "${PKGS_HYPR[@]}"
+
+    log "=== Installing Waybar and audio stack ==="
+    pacman_install "${PKGS_WAYBAR[@]}"
+
+    log "=== Installing utilities ==="
+    pacman_install "${PKGS_UTILS[@]}"
+
+    log "=== Installing screenshot / clipboard tools ==="
+    pacman_install "${PKGS_TOOLS[@]}"
+
+    log "=== Installing fonts ==="
+    pacman_install "${PKGS_FONTS[@]}"
+
+    log "=== GPU drivers ==="
+    install_gpu_drivers
+
+    log "=== AUR packages ==="
+    ensure_aur_helper
+    aur_install "${AUR_PKGS[@]}"
+
+    log "=== Enabling system services ==="
+    run_cmd sudo systemctl enable --now NetworkManager.service
+    run_cmd sudo systemctl enable --now bluetooth.service
+    run_cmd sudo systemctl enable --now seatd.service
+}
+
 ### ========= CHECKS ========= ###
 require_user() {
     if [[ "$EUID" -eq 0 ]]; then
@@ -215,6 +415,7 @@ main() {
         exit 0
     fi
 
+    install_packages
     install_configs
     ensure_gpu_config
 

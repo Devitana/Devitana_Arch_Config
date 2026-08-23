@@ -1,8 +1,8 @@
 # Devitana Arch Config
 
-Personal Arch Linux Hyprland + Waybar configuration with custom scripts and styling.
+Personal Arch Linux **Hyprland + Waybar** configuration with custom scripts and styling.
 
-This is my first Linux project after moving from Windows. I built it over a few months with nightly progress and AI assistance. Feedback is always welcome.
+This is my daily driver setup on Arch Linux, built after moving from Windows. It includes a fully scripted installer that handles packages, GPU drivers, services, and config deployment in one shot. Feedback is always welcome.
 
 ## Preview
 
@@ -11,22 +11,119 @@ This is my first Linux project after moving from Windows. I built it over a few 
 
 ## Features
 
-- **Hyprland desktop** with modular split config files authored in Lua and generated as `.conf`
+- **Hyprland desktop** with modular split config files authored in Lua
 - **Waybar setup** with custom weather, update, keyboard, and power modules
-- **Installer script** with GPU detection, service setup, and auto-generated `current_gpu.conf`
+- **Full dependency installer** – packages, GPU drivers, fonts, AUR packages, and services in one script
 - **Dry-run mode** to preview installer actions safely
 - **Automatic backup** of replaced configs and dotfiles
 
+## Current status
+
+| Area | Status |
+|------|--------|
+| Hyprland config | ✅ Working |
+| Waybar config + scripts | ✅ Working |
+| Kitty terminal config | ✅ Working |
+| `install.sh` – package install | ✅ Working |
+| `install.sh` – GPU detection | ✅ Working |
+| `install.sh` – config deploy | ✅ Working |
+| Hyprland Lua → `.conf` generation | ✅ Working |
+
+### Known limitations / TODO
+
+- Intel GPU driver list is a best-effort selection; verify against your specific hardware
+- `hyprlauncher` and `waybar-hyprland-git` are AUR-only; a working AUR helper (paru/yay) is required
+- Weather module defaults to a placeholder location (`LAT`/`LON`) – set your coordinates before use
+- Flatpak is installed but no Flatpak apps are configured by default
+
+## Prerequisites
+
+- **Arch Linux** or an Arch-based distro (Manjaro, EndeavourOS, etc.)
+- `pacman` available
+- An **AUR helper** (paru or yay) – or the installer will attempt to build `paru` from AUR automatically
+- A user account with `sudo` access
+- Internet connection during install
+
+## Quick Start
+
+### Normal install (installs everything and deploys configs)
+
+```bash
+git clone https://github.com/Devitana/Devitana_Arch_Config.git
+cd Devitana_Arch_Config
+bash install.sh
+```
+
+> **Note:** The installer requires Arch / pacman. Do not run as root.
+
+### Dry-run (preview only, no changes made)
+
+```bash
+bash install.sh --dry-run
+```
+
+### Verify installed setup
+
+```bash
+bash install.sh --verify
+```
+
+Checks core commands, required config files, and whether `current_gpu.lua` contains valid GPU env settings.
+
+## What `install.sh` installs and configures
+
+### Packages installed via `pacman`
+
+| Group | Packages |
+|-------|----------|
+| Hyprland ecosystem | `hyprland`, `hyprpaper`, `hypridle`, `hyprlock`, `hyprcursor`, `xdg-desktop-portal-hyprland`, `qt5-wayland`, `qt6-wayland`, `polkit-kde-agent`, `seatd` |
+| Waybar + audio | `waybar`, `pipewire`, `pipewire-pulse`, `pipewire-alsa`, `wireplumber`, `pavucontrol`, `playerctl`, `libpulse`, `libnotify` |
+| Utilities | `kitty`, `firefox`, `nautilus`, `blueman`, `networkmanager`, `flatpak`, `pacman-contrib`, `figlet`, `missioncenter` |
+| Screenshot / clipboard | `grim`, `slurp`, `wl-clipboard`, `cliphist`, `swappy` |
+| Fonts | `ttf-font-awesome`, `ttf-nerd-fonts-symbols`, `noto-fonts`, `noto-fonts-emoji` |
+| Scripting | `jq`, `curl`, `python`, `python-requests` |
+
+### AUR packages (via paru/yay)
+
+- `hyprlauncher` – application launcher bound to `Super+R`
+- `waybar-hyprland-git` – Waybar build with Hyprland workspace support
+
+### GPU drivers
+
+The installer detects your GPU via `lspci` and installs:
+
+- **NVIDIA** → `nvidia`, `nvidia-utils`, `nvidia-settings`
+- **AMD** → `mesa`, `vulkan-radeon`, `libva-mesa-driver`
+- **Intel** → `mesa`, `vulkan-intel`, `intel-media-driver`
+
+### System services enabled
+
+- `NetworkManager` – networking
+- `bluetooth` – Bluetooth
+- `seatd` – seat management required by Hyprland
+
+### Configs deployed
+
+- `~/.config/hypr/` – Hyprland Lua config files
+- `~/.config/waybar/` – Waybar config + scripts (scripts are made executable)
+- `~/.config/kitty/` – Kitty terminal config
+- `~/.config/hypr/env_var/current_gpu.lua` – GPU profile auto-detected and written
+
+Existing configs are backed up to `~/.config-backup-<timestamp>/` before being replaced.
+
+## Post-install notes
+
+1. **Log out and back in** (or reboot) to start a fresh Hyprland session
+2. If Bluetooth is not working, run `sudo systemctl start bluetooth`
+3. Set your **weather coordinates** – export `LAT` and `LON` environment variables or edit `~/.config/waybar/scripts/weather.sh` directly
+4. If you have an NVIDIA GPU you may need to add kernel parameters (`nvidia_drm.modeset=1`) to your bootloader – see the [Hyprland NVIDIA wiki](https://wiki.hyprland.org/Nvidia/)
+
 ## Hyprland Config: Lua Source Files
 
-All Hyprland configuration is **authored in Lua** and **generated as `.conf` files**.  
-Do **not** hand-edit the `.conf` files directly – edit the Lua sources and regenerate.
-
-### Directory layout
+All Hyprland configuration is **authored in Lua**.
 
 ```
 hypr/
-├── generate.sh              ← regenerates .conf files from Lua sources
 ├── hyprland.lua             ← top-level include list
 ├── autostart/
 │   ├── programs.lua         ← $terminal, $fileManager, $menu
@@ -37,74 +134,23 @@ hypr/
 │   └── gpu/
 │       ├── amd.lua          ← AMD GPU env vars
 │       ├── nvidia.lua       ← NVIDIA GPU env vars
-│       ├── intel.lua        ← Intel GPU env vars
 │       └── generic_gpu.lua  ← fallback GPU env vars
 ├── keyboard/
 │   ├── keybindings.lua      ← all keybinds
 │   └── layout.lua           ← keyboard / mouse / touchpad / gestures
 ├── monitors/
-│   ├── monitors.lua         ← monitor layout
-│   ├── waybar.lua           ← Waybar layer rules
-│   ├── windows.lua          ← general / decoration / animations / dwindle / misc
-│   └── workspaces.lua       ← window rules and workspace rules
+│   └── monitors.lua         ← monitor layout
 ├── permissions/
 │   └── permissions.lua      ← Hyprland permission rules
-├── scripts/
-│   └── detect_gpu.sh        ← GPU detection helper (called by installer)
-└── **/*.conf                ← 
-```bash
-
-
-
-## Quick Start
-
-### Normal install
-
-```bash
-git clone https://github.com/Devitana/Devitana_Arch_Config.git
-cd Devitana_Arch_Config
-bash install.sh
+└── scripts/
+    └── detect_gpu.sh        ← GPU detection helper (called by installer)
 ```
 
-> Scope: this project is **pacman-only** (Arch / Arch-based distros).
-
-### Dry-run (preview only)
-
-```bash
-git clone https://github.com/Devitana/Devitana_Arch_Config.git
-cd Devitana_Arch_Config
-bash install.sh --dry-run
-```
-
-### Verify installed setup
-
-```bash
-bash install.sh --verify
-```
-
-This checks core commands, required config files, and whether `current_gpu.lua` contains valid GPU env settings.
-
-### What gets installed/copied
-
-- Installs core packages (`hyprland`, `waybar`, `kitty`, `jq`, `playerctl`, `python`, `python-requests`, PipeWire stack, etc.)
-- Detects GPU and installs matching drivers (AMD/NVIDIA/Intel)
-- Writes `~/.config/hypr/env_var/current_gpu.lua` with the detected GPU profile
-- Copies configs to `~/.config/hypr`, `~/.config/kitty`, and `~/.config/waybar`
-- Copies repo `.bashrc` to `~/.bashrc`
-- Backs up replaced files to `~/.config-backup-<timestamp>/`
-- Enables services: `NetworkManager`, `bluetooth`, `seatd`
-
-## Personal Defaults vs Reusable Setup
-
-This repo is my personal daily setup first, but it is structured so others can use it too.
-
-Before first login on another machine, update these **Lua source files** (then run `bash hypr/generate.sh`):
+Before first login on a new machine, update:
 
 - `hypr/monitors/monitors.lua` (connector names, resolution, refresh rate, scale)
 - `hypr/keyboard/layout.lua` (`kb_layout`, variants/options)
 - `waybar/config.jsonc` launcher app choices (browser/file manager)
-- Optional weather env vars: `LAT`, `LON`, `WEATHER_CACHE_TIME`
-
 
 ## Customization
 
