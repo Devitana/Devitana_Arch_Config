@@ -101,6 +101,7 @@ PKGS_UTILS=(
     networkmanager
     nm-connection-editor
     network-manager-applet
+    hyprlauncher
     flatpak
     flock
     pacman-contrib
@@ -126,13 +127,6 @@ PKGS_FONTS=(
     ttf-jetbrains-mono-nerd
     noto-fonts
     noto-fonts-emoji
-)
-
-# AUR dependencies – NOT installed automatically.
-# Install these manually with your AUR helper before or after running this script:
-#   paru -S hyprlauncher
-AUR_DEPS_NOTE=(
-    hyprlauncher
 )
 
 # ---- Helpers ----
@@ -205,12 +199,6 @@ install_packages() {
 
     log "=== GPU drivers ==="
     install_gpu_drivers
-
-    log "=== AUR dependencies (not installed automatically) ==="
-    log "Install these manually with your AUR helper if needed:"
-    for pkg in "${AUR_DEPS_NOTE[@]}"; do
-        log "  paru -S $pkg  (or: yay -S $pkg)"
-    done
 
     log "=== Enabling system services ==="
     run_cmd sudo systemctl enable --now NetworkManager.service

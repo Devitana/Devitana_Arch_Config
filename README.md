@@ -32,7 +32,7 @@ This is my daily driver setup on Arch Linux, built after moving from Windows. It
 ### Known limitations / TODO
 
 - Intel GPU driver list is a best-effort selection; verify against your specific hardware
-- `hyprlauncher` and `waybar-hyprland-git` are AUR-only; a working AUR helper (paru/yay) is required
+- `waybar-hyprland-git` (AUR) is not installed; the official `waybar` package from pacman is used instead
 - Weather module defaults to a placeholder location (`LAT`/`LON`) – set your coordinates before use
 - Flatpak is installed but no Flatpak apps are configured by default
 
@@ -78,19 +78,10 @@ Checks core commands, required config files, and whether `current_gpu.lua` conta
 |-------|----------|
 | Hyprland ecosystem | `hyprland`, `hyprpaper`, `hypridle`, `hyprlock`, `hyprcursor`, `xdg-desktop-portal-hyprland`, `qt5-wayland`, `qt6-wayland`, `polkit-kde-agent`, `seatd` |
 | Waybar + audio | `waybar`, `pipewire`, `pipewire-pulse`, `pipewire-alsa`, `wireplumber`, `pavucontrol`, `playerctl`, `libpulse`, `libnotify` |
-| Utilities | `kitty`, `firefox`, `nautilus`, `blueman`, `networkmanager`, `flatpak`, `pacman-contrib`, `figlet`, `missioncenter` |
+| Utilities | `kitty`, `firefox`, `nautilus`, `blueman`, `networkmanager`, `hyprlauncher`, `flatpak`, `pacman-contrib`, `figlet`, `missioncenter` |
 | Screenshot / clipboard | `grim`, `slurp`, `wl-clipboard`, `cliphist`, `swappy` |
 | Fonts | `ttf-font-awesome`, `ttf-nerd-fonts-symbols`, `ttf-jetbrains-mono`, `ttf-jetbrains-mono-nerd`, `noto-fonts`, `noto-fonts-emoji` |
 | Scripting | `jq`, `curl`, `python`, `python-requests` |
-
-### AUR dependencies (manual install)
-
-The following packages are from the AUR and are **not installed automatically**. Install them with your AUR helper after running the script:
-
-```bash
-paru -S hyprlauncher   # application launcher (Super+R)
-# or: yay -S hyprlauncher
-```
 
 ### GPU drivers
 
