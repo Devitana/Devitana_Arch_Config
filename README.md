@@ -17,22 +17,11 @@ This is my daily driver setup on Arch Linux, built after moving from Windows. It
 - **Dry-run mode** to preview installer actions safely
 - **Automatic backup** of replaced configs and dotfiles
 
-## Current status
-
-| Area | Status |
-|------|--------|
-| Hyprland config | ✅ Working |
-| Waybar config + scripts | ✅ Working |
-| Kitty terminal config | ✅ Working |
-| `install.sh` – package install | ✅ Working |
-| `install.sh` – GPU detection | ✅ Working |
-| `install.sh` – config deploy | ✅ Working |
-| Hyprland Lua → `.conf` generation | ✅ Working |
 
 ### Known limitations / TODO
 
 - Intel GPU driver list is a best-effort selection; verify against your specific hardware
-- `waybar-hyprland-git` (AUR) is not installed; the official `waybar` package from pacman is used instead
+- `waybar-hyprland-git` (AUR) is not installed; 
 - Weather module defaults to a placeholder location (`LAT`/`LON`) – set your coordinates before use
 - Flatpak is installed but no Flatpak apps are configured by default
 
@@ -40,7 +29,7 @@ This is my daily driver setup on Arch Linux, built after moving from Windows. It
 
 - **Arch Linux** or an Arch-based distro (Manjaro, EndeavourOS, etc.)
 - `pacman` available
-- An **AUR helper** (paru or yay) – or the installer will attempt to build `paru` from AUR automatically
+- `Waybar` installed
 - A user account with `sudo` access
 - Internet connection during install
 
