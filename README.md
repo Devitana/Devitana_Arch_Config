@@ -80,12 +80,17 @@ Checks core commands, required config files, and whether `current_gpu.lua` conta
 | Waybar + audio | `waybar`, `pipewire`, `pipewire-pulse`, `pipewire-alsa`, `wireplumber`, `pavucontrol`, `playerctl`, `libpulse`, `libnotify` |
 | Utilities | `kitty`, `firefox`, `nautilus`, `blueman`, `networkmanager`, `flatpak`, `pacman-contrib`, `figlet`, `missioncenter` |
 | Screenshot / clipboard | `grim`, `slurp`, `wl-clipboard`, `cliphist`, `swappy` |
-| Fonts | `ttf-font-awesome`, `ttf-nerd-fonts-symbols`, `noto-fonts`, `noto-fonts-emoji` |
+| Fonts | `ttf-font-awesome`, `ttf-nerd-fonts-symbols`, `ttf-jetbrains-mono`, `ttf-jetbrains-mono-nerd`, `noto-fonts`, `noto-fonts-emoji` |
 | Scripting | `jq`, `curl`, `python`, `python-requests` |
 
-### AUR packages (via paru/yay)
+### AUR dependencies (manual install)
 
-- `hyprlauncher` – application launcher bound to `Super+R`
+The following packages are from the AUR and are **not installed automatically**. Install them with your AUR helper after running the script:
+
+```bash
+paru -S hyprlauncher   # application launcher (Super+R)
+# or: yay -S hyprlauncher
+```
 
 ### GPU drivers
 

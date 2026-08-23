@@ -122,12 +122,16 @@ PKGS_FONTS=(
     ttf-font-awesome
     ttf-nerd-fonts-symbols
     ttf-nerd-fonts-symbols-common
+    ttf-jetbrains-mono
+    ttf-jetbrains-mono-nerd
     noto-fonts
     noto-fonts-emoji
 )
 
-# AUR packages (installed via AUR helper)
-AUR_PKGS=(
+# AUR dependencies – NOT installed automatically.
+# Install these manually with your AUR helper before or after running this script:
+#   paru -S hyprlauncher
+AUR_DEPS_NOTE=(
     hyprlauncher
 )
 
@@ -151,48 +155,6 @@ pacman_install() {
     fi
     log "Installing: ${to_install[*]}"
     sudo pacman -S --needed --noconfirm "${to_install[@]}"
-}
-
-aur_install() {
-    local aur_helper=""
-    if command -v paru &>/dev/null; then
-        aur_helper="paru"
-    elif command -v yay &>/dev/null; then
-        aur_helper="yay"
-    else
-        warn "No AUR helper (paru/yay) found – skipping AUR packages: $*"
-        return
-    fi
-
-    local to_install=()
-    for pkg in "$@"; do
-        if ! pacman -Qq "$pkg" &>/dev/null; then
-            to_install+=("$pkg")
-        fi
-    done
-    if [[ "${#to_install[@]}" -eq 0 ]]; then
-        log "All AUR packages in this group already installed, skipping"
-        return
-    fi
-    log "Installing AUR packages via $aur_helper: ${to_install[*]}"
-    run_cmd "$aur_helper" -S --needed --noconfirm "${to_install[@]}"
-}
-
-ensure_aur_helper() {
-    if command -v paru &>/dev/null || command -v yay &>/dev/null; then
-        return
-    fi
-    warn "No AUR helper found. Attempting to install paru from AUR..."
-    if [[ "$DRY_RUN" -eq 1 ]]; then
-        log "[dry-run] would clone and build paru from AUR"
-        return
-    fi
-    local build_dir
-    build_dir="$(mktemp -d)"
-    sudo pacman -S --needed --noconfirm base-devel git
-    git clone --depth=1 https://aur.archlinux.org/paru.git "$build_dir/paru"
-    (cd "$build_dir/paru" && makepkg -si --noconfirm)
-    rm -rf "$build_dir"
 }
 
 install_gpu_drivers() {
@@ -244,9 +206,11 @@ install_packages() {
     log "=== GPU drivers ==="
     install_gpu_drivers
 
-    log "=== AUR packages ==="
-    ensure_aur_helper
-    aur_install "${AUR_PKGS[@]}"
+    log "=== AUR dependencies (not installed automatically) ==="
+    log "Install these manually with your AUR helper if needed:"
+    for pkg in "${AUR_DEPS_NOTE[@]}"; do
+        log "  paru -S $pkg  (or: yay -S $pkg)"
+    done
 
     log "=== Enabling system services ==="
     run_cmd sudo systemctl enable --now NetworkManager.service
