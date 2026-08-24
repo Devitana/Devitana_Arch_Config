@@ -61,7 +61,6 @@ run_cmd() {
 
 # Core Hyprland ecosystem (official repos)
 PKGS_HYPR=(
-    hyprland
     hyprpaper
     hypridle
     hyprlock
@@ -71,13 +70,11 @@ PKGS_HYPR=(
     qt5-wayland
     qt6-wayland
     polkit-kde-agent
-    libseat
     seatd
 )
 
 # Waybar and its runtime dependencies
 PKGS_WAYBAR=(
-    waybar
     libpulse
     pipewire
     pipewire-pulse
