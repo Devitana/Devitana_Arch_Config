@@ -100,10 +100,9 @@ PKGS_UTILS=(
     network-manager-applet
     hyprlauncher
     flatpak
-    flock
     pacman-contrib
     figlet
-    missioncenter
+    mission-center
 )
 
 # Screenshot / clipboard / media tools
