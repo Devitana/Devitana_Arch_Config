@@ -1,17 +1,32 @@
+
 -- monitors/workspaces.lua
+-- Hyprland 0.57.0
 
 ------------------------------
 --- WINDOWS AND WORKSPACES ---
 ------------------------------
 
--- Suppress maximize requests from all apps
+-- Suppress automatic maximize requests from applications.
+-- Manual fullscreen using SUPER + F remains available.
 hl.window_rule({
-    match = { class = ".*" },
+    name = "suppress-maximize-requests",
+
+    match = {
+        class = ".*",
+    },
+
     suppress_event = "maximize",
 })
 
--- Fix dragging/focus issues with un-titled, un-classed floating XWayland windows
+----------------------
+--- XWAYLAND FIXES ---
+----------------------
+
+-- Prevent certain invisible / empty XWayland windows
+-- from stealing keyboard focus.
 hl.window_rule({
+    name = "fix-xwayland-drags",
+
     match = {
         class = "^$",
         title = "^$",
@@ -20,17 +35,41 @@ hl.window_rule({
         float = true,
         pin = false,
     },
+
     no_focus = true,
 })
 
---------------------------
---- GAMING WINDOW RULES ---
---------------------------
+----------------------------
+--- FULLSCREEN ANIMATIONS ---
+----------------------------
 
--- Allow immediate tearing and disable animations for fullscreen applications/games
+-- Disable animations for fullscreen windows.
+-- Applies to games and other fullscreen applications.
 hl.window_rule({
-    name = "fullscreen-gaming-optimizations",
-    match = { fullscreen = true },
-    immediate = true,
+    name = "fullscreen-no-animations",
+
+    match = {
+        fullscreen = true,
+    },
+
     no_anim = true,
 })
+
+--------------------------
+--- GAMING OPTIMIZATIONS ---
+--------------------------
+
+-- Optional: enable tearing for a specific game.
+-- Replace GAME_CLASS with the actual game window class.
+-- Uncomment this rule after identifying the class.
+
+-- hl.window_rule({
+--     name = "game-immediate",
+--
+--     match = {
+--         class = "^GAME_CLASS$",
+--         fullscreen = true,
+--     },
+--
+--     immediate = true,
+-- })

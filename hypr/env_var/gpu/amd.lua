@@ -1,17 +1,5 @@
--- env_var/current_gpu.lua
-
--------------------------------
---- AMD / MESA OPTIMIZATION ---
--------------------------------
-
-hl.env("WLR_RENDERER", "vulkan")
-hl.env("WLR_NO_HARDWARE_CURSORS", "1")
-
-hl.env("RADV_PERFTEST", "gpl")
-hl.env("AMD_VULKAN_ICD", "radv")
-
--- hl.env("VK_ICD_FILENAMES", "/usr/share/vulkan/icd.d/radeon_icd.x86_64.json")
-
-hl.env("MESA_VK_WSI_PRESENT_MODE", "mailbox")
-hl.env("__GL_GSYNC_ALLOWED", "1")
-hl.env("__GL_VRR_ALLOWED", "1")
+-- AMD GPU profile (RADV / Mesa).
+-- Intentionally no global environment overrides.
+-- Mesa RADV supports GPL by default; RADV_PERFTEST=gpl is obsolete.
+-- Do not force WLR_RENDERER, mailbox presentation, or hardware cursors off.
+-- Control VRR in your monitor/Hyprland config (misc.vrr), if supported.

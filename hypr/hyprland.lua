@@ -1,29 +1,19 @@
--- Redirects to configurations
-
---autostart
-
-require("autostart.programs")
+-- Autostart
 require("autostart.startup")
 
---environment & variables 
-
+-- Environment
 require("env_var.current_gpu")
 require("env_var.env")
 
---keyboard binds
-
+-- Keyboard
 require("keyboard.keybindings")
 require("keyboard.layout")
 
---monitor configuration
-
+-- Monitors / Windows
 require("monitors.monitors")
 require("monitors.waybar")
 require("monitors.windows")
 require("monitors.workspaces")
 
---permissions
-
+-- Permissions
 require("permissions.permissions")
-
---other scripts

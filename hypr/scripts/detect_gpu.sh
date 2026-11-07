@@ -1,106 +1,96 @@
 #!/usr/bin/env bash
-# GPU Detection Script for Hyprland
-# Automatically sources the appropriate GPU configuration
-
+# Print a GPU profile path (default), primary vendor, or all detected vendors.
+# Hardware inventory comes from PCI sysfs; lspci is a fallback only.
 set -euo pipefail
 
-# Color codes for output
-# shellcheck disable=SC2034
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROFILE_DIR="$(cd "$SCRIPT_DIR/../env_var/gpu" && pwd)"
+PCI_ROOT="${GPU_SYSFS_ROOT:-/sys/bus/pci/devices}"
+MODE="${1:---profile}"
 
-GPU_CONFIG_DIR="$HOME/.config/hypr/env_var/gpu"
-CONFIG_FILE=""
+case "$MODE" in
+    --profile|--primary|--vendors|--report) ;;
+    *) echo "Usage: $0 [--profile|--primary|--vendors|--report]" >&2; exit 2 ;;
+esac
 
-has_cmd() {
-    command -v "$1" >/dev/null 2>&1
+declare -a VENDORS=()
+PRIMARY=""
+
+vendor_name() {
+    case "${1,,}" in
+        0x1002|1002) echo amd ;;
+        0x10de|10de) echo nvidia ;;
+        0x8086|8086) echo intel ;;
+        *) return 1 ;;
+    esac
 }
 
-detect_from_lspci() {
-    local gpus
-    gpus="$(lspci -nnk | grep -Ei 'vga compatible controller|3d controller|display controller' || true)"
-
-    # Prefer discrete NVIDIA first when present
-    if grep -Eiq 'nvidia' <<< "$gpus"; then
-        CONFIG_FILE="$GPU_CONFIG_DIR/nvidia.lua"
-        echo -e "${GREEN}[GPU] NVIDIA GPU detected${NC}" >&2
-        return 0
-    fi
-
-    # Then AMD
-    if grep -Eiq 'amd|advanced micro devices|radeon' <<< "$gpus"; then
-        CONFIG_FILE="$GPU_CONFIG_DIR/amd.lua"
-        echo -e "${GREEN}[GPU] AMD GPU detected${NC}" >&2
-        return 0
-    fi
-
-    # Then Intel
-    if grep -Eiq 'intel' <<< "$gpus"; then
-        CONFIG_FILE="$GPU_CONFIG_DIR/intel.lua"
-        echo -e "${GREEN}[GPU] Intel GPU detected${NC}" >&2
-        return 0
-    fi
-
-    return 1
+add_vendor() {
+    local vendor="$1" found
+    for found in "${VENDORS[@]}"; do
+        [[ "$found" == "$vendor" ]] && return 0
+    done
+    VENDORS+=("$vendor")
 }
 
-detect_from_modules() {
-    # Fallback: check loaded kernel modules
-    if grep -Eq '^nvidia ' /proc/modules 2>/dev/null; then
-        CONFIG_FILE="$GPU_CONFIG_DIR/nvidia.lua"
-        echo -e "${GREEN}[GPU] NVIDIA GPU detected (module-based)${NC}" >&2
-        return 0
-    fi
-
-    if grep -Eq '^amdgpu |^radeon ' /proc/modules 2>/dev/null; then
-        CONFIG_FILE="$GPU_CONFIG_DIR/amd.lua"
-        echo -e "${GREEN}[GPU] AMD GPU detected (module-based)${NC}" >&2
-        return 0
-    fi
-
-    if grep -Eq '^i915 |^xe ' /proc/modules 2>/dev/null; then
-        CONFIG_FILE="$GPU_CONFIG_DIR/intel.lua"
-        echo -e "${GREEN}[GPU] Intel GPU detected (module-based)${NC}" >&2
-        return 0
-    fi
-
-    return 1
+# Read actual GPU-class PCI devices, not audio devices from the same card.
+scan_sysfs() {
+    local dev class id boot vendor
+    for dev in "$PCI_ROOT"/*; do
+        [[ -r "$dev/class" && -r "$dev/vendor" ]] || continue
+        read -r class < "$dev/class"
+        [[ "${class,,}" =~ ^0x03[[:xdigit:]]{4}$ ]] || continue
+        read -r id < "$dev/vendor"
+        vendor="$(vendor_name "$id")" || continue
+        add_vendor "$vendor"
+        if [[ -r "$dev/boot_vga" ]]; then
+            read -r boot < "$dev/boot_vga"
+            [[ "$boot" == 1 ]] && PRIMARY="$vendor"
+        fi
+    done
 }
 
-detect_gpu() {
-    if has_cmd lspci && detect_from_lspci; then
-        return 0
-    fi
-
-    if ! has_cmd lspci; then
-        echo -e "${YELLOW}[GPU] lspci not found, checking /proc/modules${NC}" >&2
-    else
-        echo -e "${YELLOW}[GPU] Could not map lspci GPU entries, checking /proc/modules${NC}" >&2
-    fi
-
-    if detect_from_modules; then
-        return 0
-    fi
-
-    CONFIG_FILE="$GPU_CONFIG_DIR/generic_gpu.lua"
-    echo -e "${YELLOW}[GPU] Using generic/fallback configuration${NC}" >&2
-    return 1
+scan_lspci() {
+    command -v lspci >/dev/null 2>&1 || return 0
+    local line vendor
+    while IFS= read -r line; do
+        # Display controllers have PCI class 0300, 0302 or 0380 (03xx).
+        [[ "$line" =~ \[03[[:xdigit:]]{2}\] ]] || continue
+        if [[ "$line" =~ \[(10de|1002|8086):[[:xdigit:]]{4}\] ]]; then
+            vendor="$(vendor_name "${BASH_REMATCH[1]}")" || continue
+            add_vendor "$vendor"
+        fi
+    done < <(LC_ALL=C lspci -Dnn 2>/dev/null || true)
 }
 
-# Run detection
-detect_gpu || true
+scan_sysfs
+# On systems without readable sysfs (e.g. live/chroot), use lspci.
+((${#VENDORS[@]} > 0)) || scan_lspci
 
-# Output the path to the detected GPU Lua config file
-if [[ -f "$CONFIG_FILE" ]]; then
-    echo "$CONFIG_FILE"
-else
-    echo "# Warning: GPU config file not found at $CONFIG_FILE" >&2
-    fallback="$GPU_CONFIG_DIR/generic_gpu.lua"
-    if [[ ! -f "$fallback" ]]; then
-        echo "# Error: fallback GPU config also not found at $fallback" >&2
-        exit 1
-    fi
-    echo "$fallback"
+# Without boot_vga information, prefer a discrete GPU over an Intel iGPU.
+if [[ -z "$PRIMARY" ]]; then
+    for candidate in amd nvidia intel; do
+        for vendor in "${VENDORS[@]}"; do
+            if [[ "$vendor" == "$candidate" ]]; then
+                PRIMARY="$candidate"
+                break 2
+            fi
+        done
+    done
 fi
+PRIMARY="${PRIMARY:-generic_gpu}"
+
+case "$MODE" in
+    --vendors) printf '%s\n' "${VENDORS[@]}" ;;
+    --primary) printf '%s\n' "$PRIMARY" ;;
+    --report)
+        printf 'Detected GPU vendors: %s\n' "${VENDORS[*]:-none}"
+        printf 'Primary profile: %s\n' "$PRIMARY"
+        ;;
+    --profile)
+        PROFILE="$PROFILE_DIR/$PRIMARY.lua"
+        [[ -f "$PROFILE" ]] || PROFILE="$PROFILE_DIR/generic_gpu.lua"
+        [[ -f "$PROFILE" ]] || { echo "Missing GPU profile: $PROFILE" >&2; exit 1; }
+        printf '%s\n' "$PROFILE"
+        ;;
+esac

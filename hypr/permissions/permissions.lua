@@ -1,25 +1,38 @@
+
 -- permissions/permissions.lua
+-- Hyprland 0.57.0
 
 --------------------
---- PERMISSIONS ----
+--- PERMISSIONS ---
 --------------------
 
--- Ecosystem permissions (uncomment if needed)
--- hl.ecosystem = {
---     enforce_permissions = true,
--- }
+-- Hyprland's built-in permission system
+--
+-- Requires hyprland-guiutils for permission prompts.
+-- Disabled until explicitly enabled.
 
+hl.config({
+    ecosystem = {
+        enforce_permissions = true,
+    },
+})
+
+------------------------
+--- PERMISSION RULES ---
+------------------------
+
+-- Optional: allow screenshots with grim
+--
+-- Requires enforce_permissions = true.
+--
 -- hl.permission({
---     path = "/usr/(bin|local/bin)/grim",
+--     binary = "/usr/bin/grim",
 --     type = "screencopy",
---     allow = true,
+--     mode = "ask",
 -- })
 
---------------------
---- AUTOSTART ------
---------------------
-
--- Polkit Authentication Agent
-hl.on("hyprland.start", function()
-    hl.exec_cmd("/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1")
-end)
+-- Other supported modes:
+--
+-- "allow" = Always permit
+-- "ask"   = Ask for authorization
+-- "deny"  = Always deny

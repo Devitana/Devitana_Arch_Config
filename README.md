@@ -1,211 +1,176 @@
 # Devitana Arch Config
 
-Personal Arch Linux **Hyprland + Waybar** configuration with custom scripts and styling.
+Arch Linux dotfiles for **Hyprland (Lua) + Waybar + Kitty**, with an installer using **official Arch repositories only**. The installer deploys the existing repository configs; it does not create a display manager or change bootloader settings.
 
-This is my daily driver setup on Arch Linux, built after moving from Windows. It includes a fully scripted installer that handles packages, GPU drivers, services, and config deployment in one shot. Feedback is always welcome.
-
-## Preview
-
-![waybar](screenshots/2026-03-15_23-14.png)
-![waybar](screenshots/2026-03-15_23-00.png)
+> Current installer update: **v1.4.0 (proposed)**. Test it on your own machine before tagging a release.
 
 ## Features
 
-- **Hyprland desktop** with modular split config files authored in Lua
-- **Waybar setup** with custom weather, update, keyboard, and power modules
-- **Full dependency installer** – packages, GPU drivers, fonts, AUR packages, and services in one script
-- **Dry-run mode** to preview installer actions safely
-- **Automatic backup** of replaced configs and dotfiles
+- Installs official Arch Hyprland, Waybar, PipeWire, desktop utilities and font/icon dependencies.
+- Detects **all** recognized AMD, Intel and NVIDIA display-class PCI devices, then installs matching driver packages (NVIDIA kernel driver requires explicit selection).
+- Installs AMD/Intel **32-bit Vulkan libraries**, GameMode, MangoHud, Gamescope and Vulkan tools by default for Steam/Proton gaming.
+- Creates a timestamped backup of any existing `~/.config/{hypr,waybar,kitty}` folders before copying.
+- Provides a genuinely read-only dry run, package/config verification, and optional service enablement.
+- Does not install AUR packages or silently change GPU/kernel/bootloader settings.
 
+## Requirements
 
-### Known limitations / TODO
+- Standard **Arch Linux x86_64** with `pacman`, `sudo`, internet access and a non-root user.
+- `git` for cloning; `pciutils` is installed by the installer (GPU detection also works via `/sys`).
+- **Enable `[multilib]`** in `/etc/pacman.conf` before the default gaming install. Then run `sudo pacman -Syu`. Multilib is required for Steam and 32-bit Proton libraries. The installer **does not edit pacman.conf**.
+- Use the complete cloned repository, not isolated copies of the installer and GPU profiles.
+- On Arch derivatives such as Manjaro, package availability and NVIDIA driver handling can differ. Those systems are not verified.
 
-- Intel GPU driver list is a best-effort selection; verify against your specific hardware
-- `waybar-hyprland-git` (AUR) is not installed; 
-- Weather module defaults to a placeholder location (`LAT`/`LON`) – set your coordinates before use
-- Flatpak is installed but no Flatpak apps are configured by default
-
-## Prerequisites
-
-- **Arch Linux** or an Arch-based distro (Manjaro, EndeavourOS, etc.)
-- `pacman` available
-- `Waybar` installed
-- A user account with `sudo` access
-- Internet connection during install
-
-## Quick Start
-
-### Normal install (installs everything and deploys configs)
+## Install
 
 ```bash
 git clone https://github.com/Devitana/Devitana_Arch_Config.git
 cd Devitana_Arch_Config
-bash install.sh
-```
-
-> **Note:** The installer requires Arch / pacman. Do not run as root.
-
-### Dry-run (preview only, no changes made)
-
-```bash
 bash install.sh --dry-run
-```
-
-### Verify installed setup
-
-```bash
+bash install.sh
 bash install.sh --verify
 ```
 
-Checks core commands, required config files, and whether `current_gpu.lua` contains valid GPU env settings.
+`install.sh` runs a single `sudo pacman -Syu --needed ...` transaction, allowing `pacman` to resolve dependencies. It asks for confirmation unless you explicitly pass `--yes`. It does **not** install AUR helpers, apps, or packages from third-party repositories.
 
-## What `install.sh` installs and configures
+### Installer flags
 
-### Packages installed via `pacman`
+| Flag | Purpose |
+|---|---|
+| `--dry-run`, `-n` | Preview packages/config backups/deployment without any writes or `sudo` |
+| `--verify` | Check packages, deployed files and detected GPU profile (not a live GPU test) |
+| `--no-gaming` | Skip gaming utilities and all 32-bit gaming packages; multilib not required |
+| `--steam` | Add Steam from Arch multilib |
+| `--nvidia-open-dkms` | Explicitly request the open NVIDIA DKMS module for **Turing or newer only**, plus headers for installed stock Arch kernels |
+| `--enable-services` | Opt in to enabling NetworkManager and Bluetooth; may affect an existing network setup |
+| `--yes`, `-y` | Unattended pacman transaction (`--noconfirm`) |
+| `--help` | Show help |
 
-| Group | Packages |
-|-------|----------|
-| Hyprland ecosystem | `hyprland`, `hyprpaper`, `hypridle`, `hyprlock`, `hyprcursor`, `xdg-desktop-portal-hyprland`, `qt5-wayland`, `qt6-wayland`, `polkit-kde-agent`, `seatd` |
-| Waybar + audio | `waybar`, `pipewire`, `pipewire-pulse`, `pipewire-alsa`, `wireplumber`, `pavucontrol`, `playerctl`, `libpulse`, `libnotify` |
-| Utilities | `kitty`, `firefox`, `nautilus`, `blueman`, `networkmanager`, `hyprlauncher`, `flatpak`, `pacman-contrib`, `figlet`, `missioncenter` |
-| Screenshot / clipboard | `grim`, `slurp`, `wl-clipboard`, `cliphist`, `swappy` |
-| Fonts | `ttf-font-awesome`, `ttf-nerd-fonts-symbols`, `ttf-jetbrains-mono`, `ttf-jetbrains-mono-nerd`, `noto-fonts`, `noto-fonts-emoji` |
-| Scripting | `jq`, `curl`, `python`, `python-requests` |
+For a desktop without gaming packages: `bash install.sh --no-gaming`. To include Steam: `bash install.sh --steam`.
 
-### GPU drivers
+## Packages
 
-The installer detects your GPU via `lspci` and installs:
+All packages in the installer are named by their **official Arch package names**; dependencies are automatically resolved by pacman.
 
-- **NVIDIA** → `nvidia`, `nvidia-utils`, `nvidia-settings`
-- **AMD** → `mesa`, `vulkan-radeon`, `libva-mesa-driver`
-- **Intel** → `mesa`, `vulkan-intel`, `intel-media-driver`
+| Area | Directly requested packages (summary) |
+|---|---|
+| Desktop | `hyprland`, `hyprpaper`, `hypridle`, `hyprlock`, `hyprlauncher`, Wayland portals, `kitty`, `firefox`, `nautilus` |
+| PipeWire / controls | `pipewire`, `pipewire-pulse`, `pipewire-alsa`, `wireplumber`, `pavucontrol`, `playerctl`, `libnotify` |
+| Config runtime | `waybar`, `polkit-gnome`, `qt6ct`, `kvantum`, `kvantum-qt5`, `jq`, `python-requests`, `pacman-contrib`, `iputils`, `util-linux` |
+| Icons / fonts | `otf-font-awesome`, Nerd Font symbols (regular and mono), JetBrains Mono Nerd, Noto + Emoji, Adwaita icons/cursors, Papirus icons |
+| Gaming (default) | `gamemode`, `mangohud`, `gamescope`, `vulkan-tools`, `lib32-gamemode`, `lib32-mangohud`, `lib32-vulkan-icd-loader` |
+| AMD GPU | `mesa`, `vulkan-radeon` and, in gaming mode, `lib32-mesa`, `lib32-vulkan-radeon` |
+| Intel GPU | `mesa`, `vulkan-intel`, `intel-media-driver` and, in gaming mode, `lib32-mesa`, `lib32-vulkan-intel` |
+| NVIDIA GPU | `nvidia-utils`, `nvidia-settings` and optional `lib32-nvidia-utils` **only if an NVIDIA driver is already present or `--nvidia-open-dkms` is selected** |
 
-### System services enabled
+The installer installs neither `missioncenter` nor `flock` as package names: the correct package for the `missioncenter` command is `mission-center`, and the `flock` command comes from `util-linux`.
 
-- `NetworkManager` – networking
-- `bluetooth` – Bluetooth
-- `seatd` – seat management required by Hyprland
+**Icons:** `otf-font-awesome` (the actual Font Awesome desktop font package) and Nerd Fonts provide glyphs in the Waybar labels; Papirus/Adwaita/hicolor provide app and GTK icons. `ttf-font-awesome` is now a virtual provide of the webfont package, so using `otf-font-awesome` matters for Waybar. Installing a theme does not automatically select it for every application. Run `fc-list | grep -Ei 'Awesome|Nerd'` to inspect fonts. After installing, log out/in or run `fc-cache -f` if needed.
 
-### Configs deployed
+## GPU detection and safe gaming defaults
 
-- `~/.config/hypr/` – Hyprland Lua config files
-- `~/.config/waybar/` – Waybar config + scripts (scripts are made executable)
-- `~/.config/kitty/` – Kitty terminal config
-- `~/.config/hypr/env_var/current_gpu.lua` – GPU profile auto-detected and written
-
-Existing configs are backed up to `~/.config-backup-<timestamp>/` before being replaced.
-
-## Post-install notes
-
-1. **Log out and back in** (or reboot) to start a fresh Hyprland session
-2. If Bluetooth is not working, run `sudo systemctl start bluetooth`
-3. Set your **weather coordinates** – export `LAT` and `LON` environment variables or edit `~/.config/waybar/scripts/weather.sh` directly
-4. If you have an NVIDIA GPU you may need to add kernel parameters (`nvidia_drm.modeset=1`) to your bootloader – see the [Hyprland NVIDIA wiki](https://wiki.hyprland.org/Nvidia/)
-
-## Hyprland Config: Lua Source Files
-
-All Hyprland configuration is **authored in Lua**.
-
-```
-hypr/
-├── hyprland.lua             ← top-level include list
-├── autostart/
-│   ├── programs.lua         ← $terminal, $fileManager, $menu
-│   └── startup.lua          ← exec-once autostart commands
-├── env_var/
-│   ├── current_gpu.lua      ← AUTO-WRITTEN by installer (GPU-specific env vars)
-│   ├── env.lua              ← core Wayland environment variables
-│   └── gpu/
-│       ├── amd.lua          ← AMD GPU env vars
-│       ├── nvidia.lua       ← NVIDIA GPU env vars
-│       └── generic_gpu.lua  ← fallback GPU env vars
-├── keyboard/
-│   ├── keybindings.lua      ← all keybinds
-│   └── layout.lua           ← keyboard / mouse / touchpad / gestures
-├── monitors/
-│   └── monitors.lua         ← monitor layout
-├── permissions/
-│   └── permissions.lua      ← Hyprland permission rules
-└── scripts/
-    └── detect_gpu.sh        ← GPU detection helper (called by installer)
-```
-
-Before first login on a new machine, update:
-
-- `hypr/monitors/monitors.lua` (connector names, resolution, refresh rate, scale)
-- `hypr/keyboard/layout.lua` (`kb_layout`, variants/options)
-- `waybar/config.jsonc` launcher app choices (browser/file manager)
-
-## Customization
-
-### Browser / file manager launcher buttons
-
-Edit `~/.config/waybar/config.jsonc`:
-
-```jsonc
-"custom/firefox": {
-  "on-click": "firefox",
-  "tooltip": false
-},
-"custom/files": {
-  "on-click": "nautilus",
-  "tooltip": false
-}
-```
-
-### Colors and layout
-
-- Edit `~/.config/waybar/style.css`
-- Edit `~/.config/waybar/config.jsonc`
-
-### Weather module
-
-`waybar/scripts/weather.sh` uses Open-Meteo and supports:
-
-- `LAT` and `LON` environment variables
-- Cache settings via `WEATHER_CACHE_TIME`
-
-## Waybar Scripts
-
-| File | Purpose |
-|------|---------|
-| `weather.sh` | Current weather + forecast tooltip |
-| `updates.sh` | Counts available pacman/AUR/flatpak updates |
-| `installupdates.sh` | Interactive updater for pacman/AUR/flatpak |
-| `kb.sh` | Keyboard layout + caps/num lock status |
-
-## Troubleshooting
-
-**Weather not working**
-
-- Check internet connection
-- Check Python requests: `python -c "import requests; print(requests.__version__)"`
-
-**Keyboard module not showing layout**
-
-- Verify `jq`: `pacman -Q jq`
-
-**Media keys not working**
-
-- Verify `playerctl`: `pacman -Q playerctl`
-
-**Scripts not running**
+Run detector directly from the repository:
 
 ```bash
-chmod +x ~/.config/waybar/scripts/*.sh
+bash hypr/scripts/detect_gpu.sh --report
+bash hypr/scripts/detect_gpu.sh --vendors
+bash hypr/scripts/detect_gpu.sh --primary
+bash hypr/scripts/detect_gpu.sh --profile
 ```
 
-## System Requirements
+The detector uses PCI sysfs vendor IDs and `boot_vga` where available, then falls back to `lspci -Dnn`. It reports all detected vendors for driver installation. **The selected Lua profile is only a label/config template**—it does not switch active rendering devices. On hybrid systems, configure per-game GPU selection explicitly.
 
-- Arch Linux or Arch-based distro
-- Hyprland session
-- Bash shell
-- `pacman` repositories available
+The profiles intentionally **do not force** `WLR_RENDERER=vulkan`, `WLR_NO_HARDWARE_CURSORS=1`, `RADV_PERFTEST=gpl`, global NVIDIA offload, `VK_ICD_FILENAMES`, or a Vulkan presentation mode. Many of these are obsolete or can break other hardware/games. Mesa, Hyprland and the Vulkan loader should use their current defaults.
+
+### NVIDIA safety
+
+On recent Arch kernels, NVIDIA cards need a compatible kernel driver. **Do not blindly install `nvidia`** on every machine. `--nvidia-open-dkms` installs `nvidia-open-dkms` and matching `linux[-zen|-lts|-hardened]-headers` for detected installed stock kernels, but only use it for a GPU supported by NVIDIA's open driver. Older NVIDIA GPUs, custom kernels and hybrid laptops need manual driver selection and testing. Review the [ArchWiki NVIDIA guide](https://wiki.archlinux.org/title/NVIDIA) and [Hyprland NVIDIA guide](https://wiki.hypr.land/Nvidia/) before rebooting. The script never edits bootloader or initramfs settings itself.
+
+### Steam / Proton checks
+
+```bash
+pacman -Q mesa vulkan-radeon lib32-mesa lib32-vulkan-radeon  # AMD example
+vulkaninfo --summary
+gamemoded -t
+```
+
+Steam launch option for games that benefit from GameMode: `gamemoderun %command%`. Optional MangoHud overlay: `mangohud gamemoderun %command%`. Use them per game; avoid applying untested graphics tweaks to every app. Gamescope is installed but not forced globally.
+
+For variable refresh rate (FreeSync/Adaptive Sync), set `misc.vrr` via `hl.config({ misc = { vrr = 2 } })` in your Hyprland Lua config **only if the monitor supports it**; this enables VRR for fullscreen applications. Test each display, and keep monitor refresh rates/configuration separate from GPU detection. For mixed Intel/AMD systems, make sure the game actually runs on the intended GPU.
+
+## Installed files and backups
+
+```text
+~/.config/
+├── hypr/
+│   ├── hyprland.lua
+│   ├── autostart/
+│   ├── env_var/
+│   │   ├── current_gpu.lua     # selected by installer
+│   │   └── gpu/
+│   │       ├── amd.lua
+│   │       ├── intel.lua
+│   │       ├── nvidia.lua
+│   │       └── generic_gpu.lua
+│   ├── keyboard/
+│   ├── monitors/
+│   ├── permissions/
+│   └── scripts/detect_gpu.sh
+├── waybar/
+│   ├── config.jsonc
+│   ├── style.css
+│   └── scripts/
+└── kitty/
+```
+
+Before overwriting existing component files, the installer copies each existing component folder to `~/.config-backup-YYYYMMDD-HHMMSS-PID/{hypr,waybar,kitty}/`. Deployment merges files; it does not delete unrelated old config files. To restore, first save any new changes and then copy the relevant backed-up folder back to `~/.config/`.
+
+## Manual setup after installing
+
+1. Update `hypr/monitors/monitors.lua` for your physical monitor connectors, arrangement, refresh rates and scaling; the provided monitor layout is machine-specific.
+2. Check `hypr/keyboard/layout.lua` for your keyboard layout.
+3. Set `LAT` and `LON` for `waybar/scripts/weather.sh` (or edit that script) and confirm it can contact Open-Meteo.
+4. This repo launches `/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1`, so the installer uses `polkit-gnome`, not the KDE agent.
+5. Waybar's optional right/middle-click actions refer to additional applications (`chromium`, `vivaldi`, `krusader`, `thunderbird`). These are **not installed** by default; install/configure the ones you want or change the bindings. Vivaldi is in Arch Extra, but is deliberately not installed by default.
+6. `--enable-services` is optional: avoid enabling NetworkManager automatically if another network manager is already controlling your network. Hyprland under systemd-logind does not require enabling `seatd.service`.
+7. A greetd/tuigreet display manager is **not installed/configured** by this script. Start Hyprland through your existing login manager/session.
+8. The existing `hypr/env_var/env.lua` uses `QT_QPA_PLATFORMTHEME=qt6ct` and `QT_STYLE_OVERRIDE=kvantum`; both related utilities are installed here. Review its global SDL and Qt environment assignments if legacy games or toolkit apps behave unexpectedly.
+
+## Verify / troubleshoot
+
+```bash
+bash install.sh --verify
+bash hypr/scripts/detect_gpu.sh --report
+fc-list | grep -Ei 'Awesome|Nerd'
+command -v missioncenter flock checkupdates
+vulkaninfo --summary
+journalctl --user -b | grep -Ei 'hyprland|waybar|portal'
+```
+
+`--verify` checks the selected options and required paths, not that Hyprland boots successfully or every glyph renders. Run `--no-gaming --verify` if gaming packages were deliberately skipped. If an icon is missing, check its actual Unicode glyph and selected Waybar CSS font—an icon theme cannot supply a missing font glyph.
+
+## Release workflow
+
+```bash
+git switch main
+git pull --ff-only
+git switch -c fix/installer-gpu-v1.4.0
+# Copy the supplied replacement files into the matching repo paths.
+bash -n install.sh && bash -n hypr/scripts/detect_gpu.sh
+bash install.sh --dry-run
+git diff --check
+git add install.sh README.md CHANGELOG.md hypr/scripts/detect_gpu.sh hypr/env_var/gpu/
+git commit -m "fix: audit Arch packages, gaming drivers and GPU detection"
+git push -u origin fix/installer-gpu-v1.4.0
+# After testing, merge to main (e.g. via GitHub PR), then:
+git switch main
+git pull --ff-only
+git tag -a v1.4.0 -m "Devitana Arch Config v1.4.0"
+git push origin v1.4.0
+```
+
+Use [GitHub Releases](https://github.com/Devitana/Devitana_Arch_Config/releases) to publish a `v1.4.0` release from that tag, with notes from `CHANGELOG.md`. A Git tag alone is not a GitHub Release.
 
 ## License
 
-MIT License. See `LICENSE`.
-
-## Author
-
-**Devitana** - [GitHub](https://github.com/Devitana)
+MIT. See [LICENSE](LICENSE).
