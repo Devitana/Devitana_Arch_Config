@@ -2,7 +2,7 @@
 
 hl.monitor({
     output = "",
-    mode = "",
-    position = "",
+    mode = "preferred",
+    position = "auto",
     scale = 1
 })

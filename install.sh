@@ -51,12 +51,12 @@ done
 
 # Package names below are actual official Arch package names, not binaries.
 PKGS_DESKTOP=(
-    hyprland hyprpaper hypridle hyprlock hyprlauncher
+    hyprland hyprland-guiutils hyprpaper hypridle hyprlock hyprlauncher
     xdg-desktop-portal xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
     xdg-utils qt5-wayland qt6-wayland qt6ct kvantum kvantum-qt5
     polkit-gnome waybar kitty firefox nautilus
     pipewire pipewire-pulse pipewire-alsa wireplumber pavucontrol
-    playerctl libnotify blueman bluez bluez-utils
+    playerctl libnotify brightnessctl blueman bluez bluez-utils
     networkmanager network-manager-applet nm-connection-editor
     grim slurp swappy wl-clipboard cliphist
     jq curl python python-requests git pciutils
@@ -170,7 +170,7 @@ check_sources() {
     [[ -f "$REPO_DIR/waybar/config.jsonc" ]] || die 'Missing waybar/config.jsonc'
     [[ -f "$REPO_DIR/waybar/style.css" ]] || die 'Missing waybar/style.css'
     local file
-    for file in weather.sh kb.sh updates.sh installupdates.sh; do
+    for file in weather.sh kb.sh updates.sh installupdates.sh power_menu.xml; do
         [[ -f "$REPO_DIR/waybar/scripts/$file" ]] || die "Missing waybar/scripts/$file"
     done
     [[ -f "$REPO_DIR/hypr/env_var/gpu/generic_gpu.lua" ]] || die 'Missing generic GPU profile'
@@ -246,7 +246,8 @@ verify_setup() {
         "$CONFIG_HOME/waybar/scripts/weather.sh" \
         "$CONFIG_HOME/waybar/scripts/kb.sh" \
         "$CONFIG_HOME/waybar/scripts/updates.sh" \
-        "$CONFIG_HOME/waybar/scripts/installupdates.sh"; do
+        "$CONFIG_HOME/waybar/scripts/installupdates.sh" \
+        "$CONFIG_HOME/waybar/scripts/power_menu.xml"; do
         if [[ ! -f "$path" ]]; then warn "Missing file: $path"; ((errors+=1)); fi
     done
     if command -v vulkaninfo >/dev/null 2>&1; then
