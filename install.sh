@@ -85,10 +85,105 @@ repo_check() {
     for name in amd nvidia intel generic_gpu; do
         [[ -f "$PROFILE_DIR/$name.lua" ]] || die "Missing $PROFILE_DIR/$name.lua"
     done
+<<<<<<< HEAD
     for component in hypr waybar kitty; do
         [[ -d "$REPO_DIR/$component" ]] || die "Missing $REPO_DIR/$component (run from the COMPLETE dotfiles repository)"
         if [[ -L "$CONFIG_HOME/$component" ]]; then
             die "$CONFIG_HOME/$component is a symlink. Refusing to overwrite its target; manage the symlink manually."
+=======
+}
+
+run_cmd() {
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+        log "[dry-run] $*"
+    else
+        "$@"
+    fi
+}
+
+### ========= PACKAGE INSTALLATION ========= ###
+
+# ---- Package arrays grouped by category ----
+
+# Core Hyprland ecosystem (official repos)
+PKGS_HYPR=(
+    hyprpaper
+    hypridle
+    hyprlock
+    hyprcursor
+    xdg-desktop-portal-hyprland
+    xdg-utils
+    qt5-wayland
+    qt6-wayland
+    polkit-kde-agent
+    seatd
+)
+
+# Waybar and its runtime dependencies
+PKGS_WAYBAR=(
+    libpulse
+    pipewire
+    pipewire-pulse
+    pipewire-alsa
+    wireplumber
+    pavucontrol
+    playerctl
+    jq
+    curl
+    python
+    python-requests
+    libnotify
+)
+
+# Utilities referenced by configs / keybindings
+PKGS_UTILS=(
+    kitty
+    firefox
+    nautilus
+    blueman
+    networkmanager
+    nm-connection-editor
+    network-manager-applet
+    hyprlauncher
+    flatpak
+    pacman-contrib
+    figlet
+    mission-center
+)
+
+# Screenshot / clipboard / media tools
+PKGS_TOOLS=(
+    grim
+    slurp
+    wl-clipboard
+    cliphist
+    swappy
+)
+
+# Fonts (icon/nerd fonts used by Waybar and terminal)
+PKGS_FONTS=(
+    ttf-font-awesome
+    ttf-nerd-fonts-symbols
+    ttf-nerd-fonts-symbols-common
+    ttf-jetbrains-mono
+    ttf-jetbrains-mono-nerd
+    noto-fonts
+    noto-fonts-emoji
+)
+
+# ---- Helpers ----
+
+pacman_install() {
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+        log "[dry-run] would install: $*"
+        return
+    fi
+    # Install only packages not already installed
+    local to_install=()
+    for pkg in "$@"; do
+        if ! pacman -Qq "$pkg" &>/dev/null; then
+            to_install+=("$pkg")
+>>>>>>> ee65c80c109d9545f2e23c7c0276ad6fb64caf3a
         fi
     done
     [[ -f "$REPO_DIR/hypr/hyprland.lua" ]] || die 'Missing hypr/hyprland.lua in source repository'
