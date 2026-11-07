@@ -1,402 +1,284 @@
 #!/usr/bin/env bash
-# Devitana Arch Linux / Hyprland config installer.
-# Official Arch packages only; never modifies bootloader or kernel drivers.
+# Devitana Arch Config installer - official Arch repositories only.
 set -euo pipefail
 
-REPO_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+DETECT="$REPO_DIR/hypr/scripts/detect_gpu.sh"
 BACKUP_DIR="$HOME/.config-backup-$(date +%Y%m%d-%H%M%S)-$$"
-DETECTOR="$REPO_DIR/hypr/scripts/detect_gpu.sh"
-PROFILE_DIR="$REPO_DIR/hypr/env_var/gpu"
 DRY_RUN=0
-VERIFY_ONLY=0
-GAMING=0
+VERIFY=0
+GAMING=1
+STEAM=0
 ENABLE_SERVICES=0
-GPU_OVERRIDE=auto
-SELECTED_GPU=generic
-GPU_VENDORS=()
-PACKAGES=()
+NVIDIA_OPEN_DKMS=0
+YES=0
 
-log()  { printf '[INFO] %s\n' "$*"; }
+actions() { printf '[INFO] %s\n' "$*"; }
 warn() { printf '[WARN] %s\n' "$*" >&2; }
-die()  { printf '[ERROR] %s\n' "$*" >&2; exit 1; }
+die() { printf '[ERROR] %s\n' "$*" >&2; exit 1; }
 
 usage() {
     cat <<'HELP'
 Usage: bash install.sh [options]
-  --dry-run, -n  Preview without installing or changing files
-  --verify       Check packages, commands, files, and GPU selection
-  --gaming       Add Steam, GameMode, MangoHud, Gamescope, 32-bit drivers
-                 (requires [multilib] enabled in /etc/pacman.conf)
-  --gpu VENDOR   Select Hyprland profile: auto|amd|nvidia|intel|generic
-  --services     Enable NetworkManager and Bluetooth system services
-  --help, -h     Show this help
-
-NVIDIA: driver installation is deliberately MANUAL because supported
-packages depend on GPU generation and the booted kernel. See README.md.
+  -n, --dry-run          Preview (read-only: no sudo, writes or installs)
+      --verify           Check installed packages, files and GPU detection
+      --no-gaming        Skip gaming tools and 32-bit GPU libraries
+      --steam            Install Steam (requires multilib)
+      --nvidia-open-dkms Opt in to NVIDIA open DKMS driver (Turing+ only)
+      --enable-services  Enable NetworkManager and Bluetooth services
+  -y, --yes              Pass --noconfirm to pacman
+  -h, --help             Print this help
 HELP
 }
 
 while (($#)); do
     case "$1" in
         -n|--dry-run) DRY_RUN=1 ;;
-        --verify) VERIFY_ONLY=1 ;;
-        --gaming) GAMING=1 ;;
-        --services) ENABLE_SERVICES=1 ;;
-        --gpu) (($# >= 2)) || die 'Missing --gpu argument'; GPU_OVERRIDE="$2"; shift ;;
+        --verify) VERIFY=1 ;;
+        --no-gaming) GAMING=0 ;;
+        --steam) STEAM=1 ;;
+        --nvidia-open-dkms) NVIDIA_OPEN_DKMS=1 ;;
+        --enable-services) ENABLE_SERVICES=1 ;;
+        -y|--yes) YES=1 ;;
         -h|--help) usage; exit 0 ;;
         *) die "Unknown option: $1" ;;
     esac
     shift
 done
-case "$GPU_OVERRIDE" in auto|amd|nvidia|intel|generic) ;; *) die "Invalid GPU: $GPU_OVERRIDE" ;; esac
-if (( ! DRY_RUN && ! VERIFY_ONLY )) && [[ "$EUID" -eq 0 ]]; then
-    die 'Run installs as a regular user with sudo access, not root.'
-fi
+((EUID != 0)) || die 'Do not run the installer as root.'
+((STEAM == 0 || GAMING == 1)) || die '--steam requires gaming mode.'
 
-# Package names confirmed against official Arch repositories (Nov 2026).
+# Package names below are actual official Arch package names, not binaries.
 PKGS_DESKTOP=(
-    hyprland hyprpaper hypridle hyprlock hyprcursor
-    xdg-desktop-portal xdg-desktop-portal-hyprland xdg-utils xorg-xwayland
-    qt5-wayland qt6-wayland polkit-kde-agent
-    waybar kitty firefox nautilus hyprlauncher
-    pipewire pipewire-alsa pipewire-pulse wireplumber pavucontrol playerctl
-    libnotify mako
-    bluez bluez-utils blueman networkmanager nm-connection-editor network-manager-applet
-    grim slurp wl-clipboard cliphist swappy
-    jq curl python python-requests pciutils util-linux pacman-contrib
-    git flatpak figlet mission-center
+    hyprland hyprpaper hypridle hyprlock hyprlauncher
+    xdg-desktop-portal xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
+    xdg-utils qt5-wayland qt6-wayland qt6ct kvantum kvantum-qt5
+    polkit-gnome waybar kitty firefox nautilus
+    pipewire pipewire-pulse pipewire-alsa wireplumber pavucontrol
+    playerctl libnotify blueman bluez bluez-utils
+    networkmanager network-manager-applet nm-connection-editor
+    grim slurp swappy wl-clipboard cliphist
+    jq curl python python-requests git pciutils
+    pacman-contrib iputils util-linux flatpak figlet mission-center
+    fontconfig
 )
 PKGS_ICONS=(
-    otf-font-awesome ttf-nerd-fonts-symbols ttf-jetbrains-mono
+    otf-font-awesome ttf-nerd-fonts-symbols ttf-nerd-fonts-symbols-mono
     ttf-jetbrains-mono-nerd noto-fonts noto-fonts-emoji
-    adwaita-icon-theme hicolor-icon-theme papirus-icon-theme
+    adwaita-icon-theme adwaita-cursors hicolor-icon-theme papirus-icon-theme
 )
-PKGS_GPU_COMMON=(vulkan-icd-loader vulkan-tools)
-PKGS_AMD=(mesa vulkan-radeon libva-mesa-driver)
+PKGS_GAMING=(gamemode mangohud gamescope vulkan-tools)
+PKGS_32_GAMING=(lib32-gamemode lib32-mangohud lib32-vulkan-icd-loader)
+PKGS_AMD=(mesa vulkan-radeon)
 PKGS_INTEL=(mesa vulkan-intel intel-media-driver)
-PKGS_GAME=(steam gamemode mangohud gamescope)
-PKGS_GAME_32=(lib32-vulkan-icd-loader lib32-mangohud lib32-gamemode)
-PKGS_AMD_32=(lib32-mesa lib32-vulkan-radeon)
-PKGS_INTEL_32=(lib32-mesa lib32-vulkan-intel)
+PKGS_NVIDIA=(nvidia-utils nvidia-settings)
+PKGS_AMD32=(lib32-mesa lib32-vulkan-radeon)
+PKGS_INTEL32=(lib32-mesa lib32-vulkan-intel)
+PKGS_NVIDIA32=(lib32-nvidia-utils)
 
-repo_check() {
-    [[ -f "$DETECTOR" ]] || die "Missing $DETECTOR"
-    for name in amd nvidia intel generic_gpu; do
-        [[ -f "$PROFILE_DIR/$name.lua" ]] || die "Missing $PROFILE_DIR/$name.lua"
-    done
-<<<<<<< HEAD
-    for component in hypr waybar kitty; do
-        [[ -d "$REPO_DIR/$component" ]] || die "Missing $REPO_DIR/$component (run from the COMPLETE dotfiles repository)"
-        if [[ -L "$CONFIG_HOME/$component" ]]; then
-            die "$CONFIG_HOME/$component is a symlink. Refusing to overwrite its target; manage the symlink manually."
-=======
-}
-
-run_cmd() {
-    if [[ "$DRY_RUN" -eq 1 ]]; then
-        log "[dry-run] $*"
-    else
-        "$@"
-    fi
-}
-
-### ========= PACKAGE INSTALLATION ========= ###
-
-# ---- Package arrays grouped by category ----
-
-# Core Hyprland ecosystem (official repos)
-PKGS_HYPR=(
-    hyprpaper
-    hypridle
-    hyprlock
-    hyprcursor
-    xdg-desktop-portal-hyprland
-    xdg-utils
-    qt5-wayland
-    qt6-wayland
-    polkit-kde-agent
-    seatd
-)
-
-# Waybar and its runtime dependencies
-PKGS_WAYBAR=(
-    libpulse
-    pipewire
-    pipewire-pulse
-    pipewire-alsa
-    wireplumber
-    pavucontrol
-    playerctl
-    jq
-    curl
-    python
-    python-requests
-    libnotify
-)
-
-# Utilities referenced by configs / keybindings
-PKGS_UTILS=(
-    kitty
-    firefox
-    nautilus
-    blueman
-    networkmanager
-    nm-connection-editor
-    network-manager-applet
-    hyprlauncher
-    flatpak
-    pacman-contrib
-    figlet
-    mission-center
-)
-
-# Screenshot / clipboard / media tools
-PKGS_TOOLS=(
-    grim
-    slurp
-    wl-clipboard
-    cliphist
-    swappy
-)
-
-# Fonts (icon/nerd fonts used by Waybar and terminal)
-PKGS_FONTS=(
-    ttf-font-awesome
-    ttf-nerd-fonts-symbols
-    ttf-nerd-fonts-symbols-common
-    ttf-jetbrains-mono
-    ttf-jetbrains-mono-nerd
-    noto-fonts
-    noto-fonts-emoji
-)
-
-# ---- Helpers ----
-
-pacman_install() {
-    if [[ "$DRY_RUN" -eq 1 ]]; then
-        log "[dry-run] would install: $*"
-        return
-    fi
-    # Install only packages not already installed
-    local to_install=()
-    for pkg in "$@"; do
-        if ! pacman -Qq "$pkg" &>/dev/null; then
-            to_install+=("$pkg")
->>>>>>> ee65c80c109d9545f2e23c7c0276ad6fb64caf3a
-        fi
-    done
-    [[ -f "$REPO_DIR/hypr/hyprland.lua" ]] || die 'Missing hypr/hyprland.lua in source repository'
-    [[ -f "$REPO_DIR/waybar/config.jsonc" ]] || die 'Missing waybar/config.jsonc in source repository'
-}
-
-identify_gpu() {
-    local args=(--vendor --profile-dir "$PROFILE_DIR" --gpu "$GPU_OVERRIDE")
-    SELECTED_GPU="$(bash "$DETECTOR" "${args[@]}")" || die 'GPU detector failed'
-    log "Hyprland profile GPU: $SELECTED_GPU"
-
-    # Inspect ALL display-class PCI devices, including inactive secondary GPUs.
-    # Unlike `lspci`, /sys is available before pciutils is installed.
-    local pci_device pci_vendor pci_class pci
-    local found_amd=0 found_intel=0 found_nvidia=0
-    for pci_device in "${GPU_SYSFS_ROOT:-/sys}"/bus/pci/devices/*; do
-        [[ -r "$pci_device/vendor" && -r "$pci_device/class" ]] || continue
-        pci_class="$(<"$pci_device/class")"
-        [[ "$pci_class" == 0x03* ]] || continue
-        pci_vendor="$(<"$pci_device/vendor")"
-        case "$pci_vendor" in
-            0x1002) found_amd=1 ;;
-            0x8086) found_intel=1 ;;
-            0x10de) found_nvidia=1 ;;
-        esac
-    done
-    if ((found_amd)); then GPU_VENDORS+=(amd); fi
-    if ((found_intel)); then GPU_VENDORS+=(intel); fi
-    if ((found_nvidia)); then GPU_VENDORS+=(nvidia); fi
-    # Fallback for systems without readable sysfs.
-    if ((${#GPU_VENDORS[@]} == 0)) && command -v lspci >/dev/null 2>&1; then
-        pci="$(lspci -Dnn 2>/dev/null | grep -Ei '\[03(00|02|80)\]|VGA compatible controller|3D controller|Display controller' || true)"
-        if grep -Eq '\[1002:' <<< "$pci"; then GPU_VENDORS+=(amd); fi
-        if grep -Eq '\[8086:' <<< "$pci"; then GPU_VENDORS+=(intel); fi
-        if grep -Eq '\[10de:' <<< "$pci"; then GPU_VENDORS+=(nvidia); fi
-    fi
-    if ((${#GPU_VENDORS[@]} == 0)) && [[ "$SELECTED_GPU" != generic ]]; then
-        GPU_VENDORS+=("$SELECTED_GPU")
-    fi
-    log "Detected PCI GPU vendors: ${GPU_VENDORS[*]:-unknown}"
-}
-
-has_vendor() {
-    local target="$1" item
-    for item in "${GPU_VENDORS[@]}"; do [[ "$item" != "$target" ]] || return 0; done
-    return 1
-}
-
+has_package() { pacman -Qq "$1" >/dev/null 2>&1; }
 multilib_enabled() {
     command -v pacman-conf >/dev/null 2>&1 &&
-        pacman-conf --repo-list 2>/dev/null | grep -qx multilib
+        pacman-conf --repo-list 2>/dev/null | grep -Fxq multilib
 }
 
-build_package_list() {
-    local -a all=("${PKGS_DESKTOP[@]}" "${PKGS_ICONS[@]}" "${PKGS_GPU_COMMON[@]}")
-    has_vendor amd && all+=("${PKGS_AMD[@]}")
-    has_vendor intel && all+=("${PKGS_INTEL[@]}")
-    if has_vendor nvidia; then
-        warn 'NVIDIA GPU detected: its driver is NOT automatically installed. See README (generation/kernel-specific).'
-    fi
-    if ((GAMING)); then
-        all+=("${PKGS_GAME[@]}" "${PKGS_GAME_32[@]}")
-        has_vendor amd && all+=("${PKGS_AMD_32[@]}")
-        has_vendor intel && all+=("${PKGS_INTEL_32[@]}")
-        if has_vendor nvidia && ! has_vendor amd && ! has_vendor intel; then
-            warn 'NVIDIA-only: Steam needs matching lib32-nvidia-utils / legacy packages; configure the NVIDIA driver first.'
-            die 'Refusing unattended Steam driver-provider choice for NVIDIA-only systems.'
-        fi
-    fi
-    # Stable deduplication, including Mesa on AMD+Intel mixed systems.
-    local -A seen=()
+# One sorted, de-duplicated package plan; one pacman -Syu transaction.
+declare -a PACKAGES=() VENDORS=()
+declare -A INCLUDED=()
+add_packages() {
     local pkg
-    PACKAGES=()
-    for pkg in "${all[@]}"; do
-        if [[ -z "${seen[$pkg]+found}" ]]; then PACKAGES+=("$pkg"); seen[$pkg]=1; fi
+    for pkg in "$@"; do
+        if [[ ! -v "INCLUDED[$pkg]" ]]; then
+            PACKAGES+=("$pkg")
+            INCLUDED[$pkg]=1
+        fi
     done
 }
 
-check_prerequisites() {
-    ((DRY_RUN)) && return 0
-    command -v pacman >/dev/null 2>&1 || die 'pacman not found; use Arch Linux.'
-    command -v sudo >/dev/null 2>&1 || die 'sudo not found.'
-    if ((GAMING)) && ! multilib_enabled; then
-        die '[multilib] is not enabled. Enable it in /etc/pacman.conf, run sudo pacman -Syu, then retry --gaming.'
+plan_packages() {
+    [[ -f "$DETECT" ]] || die "Missing $DETECT (run from complete repository)."
+    command -v pacman >/dev/null 2>&1 || {
+        ((DRY_RUN)) && warn 'pacman not found: package plan only.' || die 'pacman required.'
+    }
+    mapfile -t VENDORS < <(bash "$DETECT" --vendors)
+    actions "GPU detection: $(bash "$DETECT" --report | tr '\n' ';')"
+
+    add_packages "${PKGS_DESKTOP[@]}" "${PKGS_ICONS[@]}"
+    if ((GAMING)); then
+        add_packages "${PKGS_GAMING[@]}" "${PKGS_32_GAMING[@]}"
     fi
+    if ((STEAM)); then add_packages steam; fi
+
+    local vendor
+    for vendor in "${VENDORS[@]}"; do
+        case "$vendor" in
+            amd)
+                add_packages "${PKGS_AMD[@]}"
+                ((GAMING)) && add_packages "${PKGS_AMD32[@]}"
+                ;;
+            intel)
+                add_packages "${PKGS_INTEL[@]}"
+                ((GAMING)) && add_packages "${PKGS_INTEL32[@]}"
+                ;;
+            nvidia)
+                if ((NVIDIA_OPEN_DKMS)) || has_package nvidia-utils; then
+                    add_packages "${PKGS_NVIDIA[@]}"
+                    ((GAMING)) && add_packages "${PKGS_NVIDIA32[@]}"
+                else
+                    warn 'NVIDIA detected, but driver not installed. Use --nvidia-open-dkms only for Turing+ or install the correct driver manually.'
+                fi
+                ;;
+        esac
+    done
+    ((${#VENDORS[@]} > 0)) || warn 'No known GPU found: skipping vendor drivers.'
+
+    if ((NVIDIA_OPEN_DKMS)); then
+        local found_nvidia=0 found_kernel=0 kernel headers
+        for vendor in "${VENDORS[@]}"; do
+            [[ "$vendor" == nvidia ]] && found_nvidia=1
+        done
+        ((found_nvidia)) || die '--nvidia-open-dkms requires a detected NVIDIA GPU.'
+        add_packages nvidia-open-dkms dkms
+        for kernel in linux linux-zen linux-lts linux-hardened; do
+            if has_package "$kernel"; then
+                headers="${kernel}-headers"
+                add_packages "$headers"
+                found_kernel=1
+            fi
+        done
+        ((found_kernel)) || die 'No supported installed kernel found for DKMS headers.'
+        warn 'NVIDIA: verify Turing-or-newer GPU, Secure Boot, kernel headers and DRM KMS before reboot.'
+    fi
+
+    if ((GAMING || STEAM)) && ! multilib_enabled; then
+        if ((DRY_RUN)); then
+            warn '[dry-run] multilib is disabled or cannot be checked: real gaming install would stop.'
+        else
+            die 'Enable [multilib] in /etc/pacman.conf, run sudo pacman -Syu, then rerun (or use --no-gaming).'
+        fi
+    fi
+}
+
+# Preflight checks avoid an incomplete dotfiles checkout silently 'succeeding'.
+check_sources() {
+    local src
+    for src in hypr waybar kitty; do
+        [[ -d "$REPO_DIR/$src" ]] || die "Missing repository directory: $src/"
+    done
+    [[ -f "$REPO_DIR/hypr/hyprland.lua" ]] || die 'Missing hypr/hyprland.lua'
+    [[ -f "$REPO_DIR/waybar/config.jsonc" ]] || die 'Missing waybar/config.jsonc'
+    [[ -f "$REPO_DIR/waybar/style.css" ]] || die 'Missing waybar/style.css'
+    local file
+    for file in weather.sh kb.sh updates.sh installupdates.sh; do
+        [[ -f "$REPO_DIR/waybar/scripts/$file" ]] || die "Missing waybar/scripts/$file"
+    done
+    [[ -f "$REPO_DIR/hypr/env_var/gpu/generic_gpu.lua" ]] || die 'Missing generic GPU profile'
 }
 
 install_packages() {
-    log "Official pacman packages (${#PACKAGES[@]}): ${PACKAGES[*]}"
-    if ((DRY_RUN)); then
-        log '[dry-run] Would run: sudo pacman -Syu --needed <packages above>'
-    else
-        # -Syu avoids partial upgrades; one transaction, no automatic --noconfirm.
-        sudo pacman -Syu --needed "${PACKAGES[@]}"
-        command -v fc-cache >/dev/null 2>&1 && fc-cache -f >/dev/null
-    fi
+    actions "Planned official packages (${#PACKAGES[@]}):"
+    printf '  %s\n' "${PACKAGES[@]}"
+    ((DRY_RUN)) && return 0
+    command -v sudo >/dev/null 2>&1 || die 'sudo required.'
+    local flags=(--needed)
+    ((YES)) && flags+=(--noconfirm)
+    sudo pacman -Syu "${flags[@]}" "${PACKAGES[@]}"
 }
 
 install_configs() {
-    local component src dst backup_created=0
+    local component src dst
     for component in hypr waybar kitty; do
         src="$REPO_DIR/$component"
         dst="$CONFIG_HOME/$component"
+        [[ ! -L "$dst" ]] || die "Refusing to overwrite symlinked config dir: $dst"
         if ((DRY_RUN)); then
-            if [[ -e "$dst" || -L "$dst" ]]; then
-                log "[dry-run] Would back up $dst to $BACKUP_DIR/$component"
-            fi
-            log "[dry-run] Would overlay $src -> $dst"
+            actions "[dry-run] backup (if exists) $dst -> $BACKUP_DIR/$component"
+            actions "[dry-run] copy $src -> $dst"
             continue
         fi
-        if [[ -e "$dst" || -L "$dst" ]]; then
-            if ((backup_created == 0)); then mkdir -p "$BACKUP_DIR"; backup_created=1; fi
-            cp -a -- "$dst" "$BACKUP_DIR/$component"
+        if [[ -e "$dst" ]]; then
+            mkdir -p "$BACKUP_DIR"
+            cp -a "$dst" "$BACKUP_DIR/$component"
         fi
-        mkdir -p -- "$dst"
-        cp -a -- "$src/." "$dst/"
+        mkdir -p "$dst"
+        cp -a "$src/." "$dst/"
     done
-    if ((backup_created)); then log "Backup saved at $BACKUP_DIR"; fi
+
+    local profile
+    profile="$(bash "$DETECT" --profile)"
     if ((DRY_RUN)); then
-        log '[dry-run] Would make ~/.config/{hypr,waybar}/scripts/*.sh executable'
-        return
+        actions "[dry-run] copy $profile -> $CONFIG_HOME/hypr/env_var/current_gpu.lua"
+        return 0
     fi
-    local script
-    for component in hypr waybar; do
-        for script in "$CONFIG_HOME/$component"/scripts/*.sh; do
-            [[ -f "$script" ]] && chmod +x -- "$script"
-        done
-    done
+    find "$CONFIG_HOME/waybar/scripts" "$CONFIG_HOME/hypr/scripts" \
+        -maxdepth 1 -type f -name '*.sh' -exec chmod +x {} + 2>/dev/null || true
+    cp -a "$profile" "$CONFIG_HOME/hypr/env_var/current_gpu.lua"
+    [[ -d "$BACKUP_DIR" ]] && actions "Backups saved in $BACKUP_DIR"
+    actions "Installed GPU profile: $(basename "$profile")"
 }
 
-install_gpu_profile() {
-    local source
-    source="$(bash "$DETECTOR" --profile-dir "$PROFILE_DIR" --gpu "$SELECTED_GPU")" || die 'GPU profile path not found'
+configure_services() {
+    ((ENABLE_SERVICES)) || { actions 'Services unchanged (use --enable-services to opt in).'; return; }
     if ((DRY_RUN)); then
-        log "[dry-run] Would copy $source to $CONFIG_HOME/hypr/env_var/current_gpu.lua"
-        return
+        actions '[dry-run] enable NetworkManager.service and bluetooth.service'
+    else
+        sudo systemctl enable --now NetworkManager.service bluetooth.service
     fi
-    mkdir -p "$CONFIG_HOME/hypr/env_var"
-    cp -- "$source" "$CONFIG_HOME/hypr/env_var/current_gpu.lua"
-    log "Installed $SELECTED_GPU GPU profile (no global Vulkan ICD override)"
-}
-
-enable_services() {
-    ((ENABLE_SERVICES)) || { log 'Services left unchanged (use --services to enable NetworkManager and Bluetooth).'; return; }
-    if ((DRY_RUN)); then
-        log '[dry-run] Would enable NetworkManager.service and bluetooth.service'; return
-    fi
-    sudo systemctl enable --now NetworkManager.service bluetooth.service
+    # seatd is intentionally not enabled: Hyprland can use systemd-logind.
 }
 
 verify_setup() {
-    local errors=0 cmd path pkg
-    log 'Running healthcheck...'
-    for cmd in Hyprland waybar kitty hyprpaper hypridle hyprlock jq python checkupdates; do
-        if ! command -v "$cmd" >/dev/null 2>&1; then warn "Missing command: $cmd"; ((errors+=1)); fi
+    local errors=0 pkg path
+    actions 'Checking installed packages and config files...'
+    for pkg in "${PACKAGES[@]}"; do
+        if ! has_package "$pkg"; then
+            warn "Missing package: $pkg"
+            ((errors+=1))
+        fi
     done
     for path in \
         "$CONFIG_HOME/hypr/hyprland.lua" \
         "$CONFIG_HOME/hypr/env_var/current_gpu.lua" \
         "$CONFIG_HOME/hypr/scripts/detect_gpu.sh" \
         "$CONFIG_HOME/waybar/config.jsonc" \
+        "$CONFIG_HOME/waybar/style.css" \
+        "$CONFIG_HOME/waybar/scripts/weather.sh" \
         "$CONFIG_HOME/waybar/scripts/kb.sh" \
         "$CONFIG_HOME/waybar/scripts/updates.sh" \
         "$CONFIG_HOME/waybar/scripts/installupdates.sh"; do
-        if [[ ! -f "$path" ]]; then warn "Missing installed file: $path"; ((errors+=1)); fi
+        if [[ ! -f "$path" ]]; then warn "Missing file: $path"; ((errors+=1)); fi
     done
-    for pkg in "${PACKAGES[@]}"; do
-        if ! command -v pacman >/dev/null 2>&1 || ! pacman -Qq "$pkg" >/dev/null 2>&1; then
-            warn "Missing official package: $pkg"; ((errors+=1))
+    if command -v vulkaninfo >/dev/null 2>&1; then
+        actions 'Vulkan inspection available: vulkaninfo --summary'
+    fi
+    actions "Primary GPU: $(bash "$DETECT" --primary)"
+    local vendor
+    for vendor in "${VENDORS[@]}"; do
+        if [[ "$vendor" == nvidia ]] && ! has_package nvidia-utils; then
+            warn 'NVIDIA detected without nvidia-utils: select the correct NVIDIA driver for your hardware.'
+            ((errors+=1))
         fi
     done
-    if command -v fc-list >/dev/null 2>&1; then
-        for family in 'Font Awesome' 'Symbols Nerd Font'; do
-            if ! fc-list : family | grep -Fqi "$family"; then
-                warn "Fontconfig does not list $family"; ((errors+=1))
-            fi
-        done
-    else
-        warn 'fc-list not found (fontconfig verification skipped)'
+    if ((errors)); then
+        warn "Verification found $errors missing item(s)."
+        return 1
     fi
-    if command -v vulkaninfo >/dev/null 2>&1; then
-        log 'vulkaninfo installed; run vulkaninfo --summary after starting Hyprland.'
-    else
-        warn 'vulkaninfo unavailable (vulkan-tools not installed).'; ((errors+=1))
-    fi
-    if ((GAMING)); then
-        for pkg in steam gamemode mangohud gamescope; do
-            if ! pacman -Qq "$pkg" >/dev/null 2>&1; then warn "Missing gaming package: $pkg"; ((errors+=1)); fi
-        done
-    fi
-    if ((errors)); then warn "Healthcheck found $errors issue(s)"; return 1; fi
-    log 'Healthcheck passed (this does not prove runtime game performance).'
+    actions 'Installed package/config checks passed (not a live graphics test).'
 }
 
-main() {
-    if ((VERIFY_ONLY)); then
-        identify_gpu
-        build_package_list
-        verify_setup
-        return
-    fi
-    repo_check
-    check_prerequisites
-    identify_gpu
-    build_package_list
-    if ((GAMING && DRY_RUN)) && ! multilib_enabled; then
-        warn '[dry-run] [multilib] needs to be enabled for --gaming.'
-    fi
-    install_packages
-    install_configs
-    install_gpu_profile
-    enable_services
-    if ((DRY_RUN)); then log '[dry-run] No system changes made.'; return; fi
+check_sources
+plan_packages
+if ((VERIFY)); then
     verify_setup
-}
-main
+    exit $?
+fi
+install_packages
+install_configs
+configure_services
+if ((DRY_RUN)); then
+    actions 'Dry-run finished: no changes made.'
+else
+    verify_setup
+    actions 'Install completed. Log out and start a fresh Hyprland session.'
+fi
