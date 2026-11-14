@@ -1,7 +1,6 @@
 {
   /* ---------- GENERAL SETTINGS ---------- */
   "layer": "top",
-  /*"output": "DP-1",*/
   "position": "top",
   "height": 48,
   "exclusive": true,
@@ -89,8 +88,8 @@
     "return-type": "json",
     "tooltip": true,
     "signal": 2,
-    /*"on-click": "xdg-open https://wttr.in",*/
-    "on-click-right": "pkill -RTMIN+2 waybar"
+    "on-click": "xdg-open https://wttr.in/Memmingen",
+    "on-click-right": "pkill -RTMIN+2 waybar"                  
   },
 
 "clock#date": {
@@ -131,7 +130,7 @@
       "transition-duration": 500,
       "transition-left-to-right": true,
       "children-class": "system-hidden",
-      "click-to-reveal": true
+      "click-to-reveal": true 
     },
     "modules": [
       "custom/arrow",
@@ -168,13 +167,12 @@
     "escape": true,
     "return-type": "json",
     "exec": "~/.config/waybar/scripts/updates.sh",
-    "exec-if": "ping -c1 archlinux.org >/dev/null 2>&1",
     "interval": 1800,
     "signal": 1,
     "hide-empty-text": true,
     "on-click": "kitty ~/.config/waybar/scripts/installupdates.sh",
     "tooltip": false
-  },
+  },  
 
   "memory": {
     "interval": 30,
@@ -185,7 +183,7 @@
 
   "custom/kb": {
     "exec": "~/.config/waybar/scripts/kb.sh",
-    "interval": 1,
+    "interval": 5,
     "return-type": "json",
     "format": "{text}",
     "class": "{class}",
@@ -226,6 +224,6 @@
         "hibernate": "systemctl hibernate",
         "reboot": "systemctl reboot",
         "shutdown": "systemctl poweroff"
-    }
+    }  
   }
 }

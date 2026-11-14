@@ -1,19 +1,30 @@
 #!/bin/bash
 
-layout=$(hyprctl devices -j | jq -r '.keyboards[0].active_keymap' | awk '{print toupper(substr($0,1,2))}')
+layout=$(hyprctl devices -j 2>/dev/null | jq -r '.keyboards[0].active_keymap // "??" | ascii_upcase | .[0:2]' 2>/dev/null)
+[[ -n "$layout" ]] || layout="??"
 
-caps=$(cat /sys/class/leds/input*::capslock/brightness 2>/dev/null | head -n1)
-num=$(cat /sys/class/leds/input*::numlock/brightness 2>/dev/null | head -n1)
+read_led() {
+    local led value
+    for led in /sys/class/leds/*::"$1"/brightness; do
+        [[ -r "$led" ]] || continue
+        IFS= read -r value < "$led" || continue
+        printf '%s\n' "$value"
+        return
+    done
+}
+
+caps=$(read_led capslock)
+num=$(read_led numlock)
 
 class=""
 
 # Set class based on state
-if [ "$caps" != "0" ] && [ -n "$caps" ] && [ "$num" != "0" ] && [ -n "$num" ]; then
+if [[ "$caps" != "0" && -n "$caps" && "$num" != "0" && -n "$num" ]]; then
     class="caps-on-num-on"  # Special combined class
-elif [ "$caps" != "0" ] && [ -n "$caps" ]; then
+elif [[ "$caps" != "0" && -n "$caps" ]]; then
     class="caps-on"
-elif [ "$num" != "0" ] && [ -n "$num" ]; then
+elif [[ "$num" != "0" && -n "$num" ]]; then
     class="num-on"
 fi
 
-echo "{\"text\":\"⌨ $layout\",\"class\":\"$class\"}"
+printf '{"text":"⌨ %s","class":"%s"}\n' "$layout" "$class"

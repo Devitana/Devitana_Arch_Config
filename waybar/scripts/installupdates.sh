@@ -20,18 +20,13 @@ log_warning() { echo -e "${YELLOW}⚠${NC} $1"; }
 # ============================================================================
 UPDATE_LOG="$HOME/.local/share/devitana/update.log"
 LOG_DIR="$(dirname "$UPDATE_LOG")"
-LOCK_FILE="/tmp/devitana-update.lock"
-LOCK_FD=201
+LOCK_DIR="${XDG_RUNTIME_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/waybar}"
+LOCK_FILE="$LOCK_DIR/update.lock"
+UPDATE_FAILURES=()
 
 # ============================================================================
 # CLEANUP & EXIT HANDLERS
 # ============================================================================
-cleanup() {
-    rm -f "$LOCK_FILE"
-}
-
-trap cleanup EXIT
-
 error_exit() {
     log_error "$1"
     notify-send -u critical "Update Failed" "$1" 2>/dev/null || true
@@ -46,16 +41,16 @@ error_exit() {
 # PRELIMINARY CHECKS
 # ============================================================================
 
-# Check if already running (atomic)
-exec {LOCK_FD}>"$LOCK_FILE"
-if ! flock -n "$LOCK_FD"; then
+mkdir -p "$LOG_DIR" "$LOCK_DIR" || {
+    log_error "Unable to create update state directories"
+    exit 1
+}
+
+exec 9>"$LOCK_FILE"
+if ! flock -n 9; then
     log_warning "Update already in progress. Exiting."
-    read -p "Press Enter to close..."
     exit 0
 fi
-
-# Create log directory
-mkdir -p "$LOG_DIR" 2>/dev/null || true
 
 # Check if running as regular user (sudo will be used)
 if [[ $EUID -eq 0 ]]; then
@@ -132,6 +127,7 @@ if [[ -n "$AUR_HELPER" ]]; then
     echo
     
     if ! $AUR_HELPER -Syu --noconfirm; then
+        UPDATE_FAILURES+=("$AUR_HELPER")
         log_error "$AUR_HELPER update encountered an error (non-critical, continuing...)"
         notify-send -u normal "Update Warning" "$AUR_HELPER had issues, but pacman succeeded." 2>/dev/null || true
         echo "$(date '+%Y-%m-%d %H:%M:%S'): $AUR_HELPER update had issues" >> "$UPDATE_LOG" 2>/dev/null
@@ -151,6 +147,7 @@ if command -v flatpak >/dev/null 2>&1; then
     echo
     
     if ! flatpak update --assumeyes; then
+        UPDATE_FAILURES+=("Flatpak")
         log_error "Flatpak update encountered an error (non-critical, continuing...)"
         notify-send -u normal "Update Warning" "Flatpak update had issues." 2>/dev/null || true
         echo "$(date '+%Y-%m-%d %H:%M:%S'): Flatpak update had issues" >> "$UPDATE_LOG" 2>/dev/null
@@ -163,101 +160,19 @@ else
     echo "$(date '+%Y-%m-%d %H:%M:%S'): Flatpak not installed" >> "$UPDATE_LOG" 2>/dev/null
 fi
 
-# ============================================================================
-# CLEANUP
-# ============================================================================
 echo
-log_info "Running post-update cleanup..."
-
-# PACMAN cleanup
-if command -v pacman >/dev/null 2>&1; then
-    if sudo pacman -Sc --noconfirm; then
-        log_success "pacman cache cleaned"
-        echo "$(date '+%Y-%m-%d %H:%M:%S'): pacman cache cleaned" >> "$UPDATE_LOG" 2>/dev/null
+if command -v paccache >/dev/null 2>&1; then
+    log_info "Cleaning old package cache entries (keeping 3 versions)..."
+    if sudo paccache -r -k 3; then
+        log_success "Package cache cleanup completed"
+        echo "$(date '+%Y-%m-%d %H:%M:%S'): Package cache cleanup successful" >> "$UPDATE_LOG" 2>/dev/null
     else
-        log_warning "pacman cache cleanup failed (continuing...)"
-        echo "$(date '+%Y-%m-%d %H:%M:%S'): pacman cache cleanup failed" >> "$UPDATE_LOG" 2>/dev/null
+        log_warning "Package cache cleanup failed"
+        echo "$(date '+%Y-%m-%d %H:%M:%S'): Package cache cleanup failed" >> "$UPDATE_LOG" 2>/dev/null
     fi
-
-    # Remove orphaned packages only when list is non-empty
-    orphans="$(pacman -Qdtq 2>/dev/null || true)"
-    if [[ -n "$orphans" ]]; then
-        if sudo pacman -Rns --noconfirm $orphans; then
-            log_success "orphan packages removed"
-            echo "$(date '+%Y-%m-%d %H:%M:%S'): orphan packages removed" >> "$UPDATE_LOG" 2>/dev/null
-        else
-            log_warning "orphan package removal failed (continuing...)"
-            echo "$(date '+%Y-%m-%d %H:%M:%S'): orphan package removal failed" >> "$UPDATE_LOG" 2>/dev/null
-        fi
-    else
-        log_info "No orphan packages to remove"
-        echo "$(date '+%Y-%m-%d %H:%M:%S'): no orphan packages" >> "$UPDATE_LOG" 2>/dev/null
-    fi
+else
+    log_warning "paccache not installed. Skipping package cache cleanup."
 fi
-
-# PARU cleanup
-if command -v paru >/dev/null 2>&1; then
-    if paru -Sc --noconfirm; then
-        log_success "paru cache cleaned"
-        echo "$(date '+%Y-%m-%d %H:%M:%S'): paru cache cleaned" >> "$UPDATE_LOG" 2>/dev/null
-    else
-        log_warning "paru cache cleanup failed (continuing...)"
-        echo "$(date '+%Y-%m-%d %H:%M:%S'): paru cache cleanup failed" >> "$UPDATE_LOG" 2>/dev/null
-    fi
-
-    # Remove unneeded AUR dependencies via paru
-    aur_orphans="$(paru -Qdtq 2>/dev/null || true)"
-    if [[ -n "$aur_orphans" ]]; then
-        if paru -Rns --noconfirm $aur_orphans; then
-            log_success "paru: unneeded dependencies removed"
-            echo "$(date '+%Y-%m-%d %H:%M:%S'): paru unneeded deps removed" >> "$UPDATE_LOG" 2>/dev/null
-        else
-            log_warning "paru: unneeded dependency removal failed (continuing...)"
-            echo "$(date '+%Y-%m-%d %H:%M:%S'): paru unneeded deps removal failed" >> "$UPDATE_LOG" 2>/dev/null
-        fi
-    else
-        log_info "paru: no unneeded dependencies to remove"
-    fi
-fi
-
-# YAY cleanup
-if command -v yay >/dev/null 2>&1; then
-    if yay -Sc --noconfirm; then
-        log_success "yay cache cleaned"
-        echo "$(date '+%Y-%m-%d %H:%M:%S'): yay cache cleaned" >> "$UPDATE_LOG" 2>/dev/null
-    else
-        log_warning "yay cache cleanup failed (continuing...)"
-        echo "$(date '+%Y-%m-%d %H:%M:%S'): yay cache cleanup failed" >> "$UPDATE_LOG" 2>/dev/null
-    fi
-
-    # Remove unneeded AUR dependencies via yay
-    yay_orphans="$(yay -Qdtq 2>/dev/null || true)"
-    if [[ -n "$yay_orphans" ]]; then
-        if yay -Rns --noconfirm $yay_orphans; then
-            log_success "yay: unneeded dependencies removed"
-            echo "$(date '+%Y-%m-%d %H:%M:%S'): yay unneeded deps removed" >> "$UPDATE_LOG" 2>/dev/null
-        else
-            log_warning "yay: unneeded dependency removal failed (continuing...)"
-            echo "$(date '+%Y-%m-%d %H:%M:%S'): yay unneeded deps removal failed" >> "$UPDATE_LOG" 2>/dev/null
-        fi
-    else
-        log_info "yay: no unneeded dependencies to remove"
-    fi
-fi
-
-# FLATPAK cleanup
-if command -v flatpak >/dev/null 2>&1; then
-    if flatpak uninstall --unused -y; then
-        log_success "unused flatpaks removed"
-        echo "$(date '+%Y-%m-%d %H:%M:%S'): flatpak unused removed" >> "$UPDATE_LOG" 2>/dev/null
-    else
-        log_warning "flatpak cleanup failed (continuing...)"
-        echo "$(date '+%Y-%m-%d %H:%M:%S'): flatpak cleanup failed" >> "$UPDATE_LOG" 2>/dev/null
-    fi
-fi
-
-log_info "Skipping global /tmp cleanup for safety"
-echo "$(date '+%Y-%m-%d %H:%M:%S'): skipped global /tmp cleanup" >> "$UPDATE_LOG" 2>/dev/null
 
 # ============================================================================
 # RELOAD WAYBAR & NOTIFY
@@ -270,14 +185,24 @@ pkill -RTMIN+1 waybar 2>/dev/null || log_warning "Waybar not running"
 # FINISH
 # ============================================================================
 echo
-log_success "All updates completed successfully!"
-notify-send -u normal "Update Complete" "All system updates applied successfully." 2>/dev/null || true
-echo "$(date '+%Y-%m-%d %H:%M:%S'): Update completed successfully" >> "$UPDATE_LOG" 2>/dev/null
+EXIT_STATUS=0
+if (( ${#UPDATE_FAILURES[@]} )); then
+    EXIT_STATUS=1
+    SUMMARY="Update incomplete. Failed updates: ${UPDATE_FAILURES[*]}. See the log for details."
+    log_warning "$SUMMARY"
+    notify-send -u normal "Update Incomplete" "$SUMMARY" 2>/dev/null || true
+    echo "$(date '+%Y-%m-%d %H:%M:%S'): $SUMMARY" >> "$UPDATE_LOG" 2>/dev/null
+else
+    log_success "All updates completed successfully!"
+    notify-send -u normal "Update Complete" "All system updates applied successfully." 2>/dev/null || true
+    echo "$(date '+%Y-%m-%d %H:%M:%S'): Update completed successfully" >> "$UPDATE_LOG" 2>/dev/null
+fi
 
 # Display summary
 echo
 log_info "Update log: $UPDATE_LOG"
 echo
 
+# shellcheck disable=SC2162
 read -p "Press Enter to close..."
-exit 0
+exit "$EXIT_STATUS"
